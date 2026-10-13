@@ -5,14 +5,18 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
-import android.view.LayoutInflater;
 
 import com.example.stampit2.NoteView.NoteInterface;
+import com.example.stampit2.Utils.FileUtils;
+import com.example.stampit2.Utils.InformUtils;
+
+import java.io.File;
 
 public class MainActivity extends AppCompatActivity
 {
     private NoteInterface noteInterface;
 
+    private boolean tempIsNext;
     private final ActivityResultLauncher<String> galleryLauncher = registerForActivityResult
             (
             new ActivityResultContracts.GetContent(),
@@ -20,7 +24,7 @@ public class MainActivity extends AppCompatActivity
             {
                 if(uri != null && noteInterface != null)
                 {
-                    noteInterface.setImage((uri));
+                    noteInterface.insertPage(uri, tempIsNext);
                 }
             }
     );
@@ -29,14 +33,22 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+
+//        FileUtils.instance().clearAllFiles(this);
+
         setContentView(R.layout.note);
 
         noteInterface = findViewById(R.id.noteInterface);
-        noteInterface.setOnAddPhotoClicked(()->
+        noteInterface.setOnAddPhotoClicked((boolean isNext)->
         {
+            tempIsNext = isNext;
             galleryLauncher.launch("image/*");
         });
 
 
+        noteInterface.initializeNote(new File(getFilesDir(), "TempNote"));
+
+
+        InformUtils.instance().showOnlyInfo(this, "Test");
     }
 }

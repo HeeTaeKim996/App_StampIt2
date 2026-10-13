@@ -15,8 +15,12 @@ import androidx.annotation.Nullable;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
 import com.example.stampit2.R;
+import com.example.stampit2.Utils.InformUtils;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,7 +28,7 @@ import java.io.InputStream;
 
 public class NoteInterface extends ConstraintLayout
 {
-    private Button insertImageButton;
+    private Button toNextButton;
     private ImageView noteImage;
     private Matrix matrix = new Matrix();
     private ScaleGestureDetector scaleGestureDetector;
@@ -37,9 +41,12 @@ public class NoteInterface extends ConstraintLayout
     private int noteImageWidth;
     private int noteImageHeight;
 
+    private NoteInfo noteInfo;
+
+
     public static interface OnAddPhotoClickListener
     {
-        void onAddPhotoClicked();
+        void onAddPhotoClicked(boolean isNext);
     }
     private OnAddPhotoClickListener listener;
 
@@ -59,53 +66,37 @@ public class NoteInterface extends ConstraintLayout
     {
         super.onFinishInflate();
 
-        insertImageButton = findViewById(R.id.insertImageButton);
+        toNextButton = findViewById(R.id.button_toNext);
         noteImage = findViewById(R.id.noteImage);
 
-        // 이미지 로드
-        insertImageButton.setOnClickListener(view->
-        {
-            if(listener != null)
-            {
-                listener.onAddPhotoClicked();
-            }
-        });
+        toNextButton.setOnClickListener(view-> { onToNextButtonClicked(); });
 
         Context context = getContext();
-
-        File imageFile = new File(context.getFilesDir(), "TempImage");
-
-        if(imageFile.exists())
-        {
-            Uri savedUri = Uri.fromFile(imageFile);
-            noteImage.setImageURI(savedUri);
-        }
-
 
         // 줌인-줌아웃(스케일), 드래그(아핀 x,y ) 처리
         scaleGestureDetector = new ScaleGestureDetector(context,
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
-            @Override
-            public boolean onScale(ScaleGestureDetector detector) {
-                float scale = detector.getScaleFactor();
+                    @Override
+                    public boolean onScale(ScaleGestureDetector detector) {
+                        float scale = detector.getScaleFactor();
 
 
-                float targetScale = scale * currScale;
-                targetScale = Math.max(minScale, Math.min(targetScale, minScale * 3.f));
+                        float targetScale = scale * currScale;
+                        targetScale = Math.max(minScale, Math.min(targetScale, minScale * 3.f));
 
-                float adjustedScale = targetScale / currScale;
-                currScale = targetScale;
+                        float adjustedScale = targetScale / currScale;
+                        currScale = targetScale;
 
-                // postScale 의 1, 2 는 scale x, y 가 아니라 scale x, y 에 대한 *= 
-                // 따라서 위처럼 adjustedScale 을 따로 구함
-                matrix.postScale(adjustedScale, adjustedScale, detector.getFocusX(), detector.getFocusY());
+                        // postScale 의 1, 2 는 scale x, y 가 아니라 scale x, y 에 대한 *=
+                        // 따라서 위처럼 adjustedScale 을 따로 구함
+                        matrix.postScale(adjustedScale, adjustedScale, detector.getFocusX(), detector.getFocusY());
 
-                enforceBounds();
+                        enforceBounds();
 
-                noteImage.setImageMatrix(matrix);
-                return true;
-            }
-        });
+                        noteImage.setImageMatrix(matrix);
+                        return true;
+                    }
+                });
 
         gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener()
         {
@@ -122,19 +113,12 @@ public class NoteInterface extends ConstraintLayout
             }
         });
 
-        
+
         noteImage.setOnTouchListener((v, event)->
         {
             scaleGestureDetector.onTouchEvent(event);
             gestureDetector.onTouchEvent(event);
             return true;
-        });
-
-        // noteImage 에 이미지가 불러와진 후 발동 (추후에는 필요 없을 것 같음)
-        noteImage.post(()->
-        {
-            updateNoteImagesPerimeter();
-            setMaxScalePosByNoteImage();
         });
     }
 
@@ -147,7 +131,50 @@ public class NoteInterface extends ConstraintLayout
         if(noteImage == null || noteImage.getDrawable() == null) return;
 
         updateNoteImagesPerimeter();
-        setMaxScalePosByNoteImage();
+        setMinScalePosByNoteImage();
+    }
+
+
+    public void initializeNote(File noteInfoFile)
+    {
+
+        if(noteInfoFile.exists() == false)
+        {
+            createNoteFile(noteInfoFile);
+        }
+        else
+        {
+            loadFromNoteFile(noteInfoFile);
+        }
+
+
+        Context context = getContext();
+
+        // 이미지 로드
+        if(noteInfo.pages > 0)
+        {
+            noteInfo.currPage = 1;
+            File imageFile = new File(getNotePageFile(noteInfo.noteFile, (short) 1), "Temp");
+            if(imageFile.exists())
+            {
+                Uri savedUri = Uri.fromFile(imageFile);
+                noteImage.setImageURI(savedUri);
+            }
+            else
+            {
+                InformUtils.instance().showOnlyInfo(context, "NoteInterface : 이미지가 없음");
+            }
+        }
+
+
+
+
+        // noteImage 에 이미지가 불러와진 후 발동
+        noteImage.post(()->
+        {
+            updateNoteImagesPerimeter();
+            setMinScalePosByNoteImage();
+        });
     }
 
 
@@ -156,43 +183,57 @@ public class NoteInterface extends ConstraintLayout
         listener = inListener;
     }
 
-    public void setImage(Uri uri)
+    public void insertPage(Uri uri, boolean isNext)
     {
-        // 이미지를 저장
-        try
+        Context context = getContext();
+
+        if(isNext)
         {
-            Context context = getContext();
-            InputStream inputStream = context.getContentResolver().openInputStream(uri);
-
-            File imageFile = new File(context.getFilesDir(), "TempImage");
-
-            FileOutputStream fos = new FileOutputStream(imageFile);
-            byte[] buffer = new byte[1024];
-            int len;
-            while((len = inputStream.read(buffer)) > 0)
+            if(noteInfo.currPage == noteInfo.pages)
             {
-                fos.write(buffer, 0, len);
+                noteInfo.currPage++;
+
+                try
+                {
+                    InputStream inputStream = context.getContentResolver().openInputStream(uri);
+
+                    File newFile = getNotePageFile(noteInfo.noteFile, (short) (noteInfo.currPage));
+                    newFile.mkdir();
+                    File imageFile = new File(newFile, "Temp");
+
+                    FileOutputStream fos = new FileOutputStream(imageFile);
+                    byte[] buffer = new byte[1024];
+                    int len;
+                    while((len = inputStream.read(buffer)) > 0)
+                    {
+                        fos.write(buffer, 0, len);
+                    }
+
+                    fos.flush();
+                    fos.close();
+                    inputStream.close();
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+
             }
-
-            fos.flush();
-            fos.close();
-            inputStream.close();
-        }
-        catch(IOException e)
-        {
-            e.printStackTrace();
         }
 
-        
+        // 갱신된 데이터 저장
+        noteInfo.pages++;
+        saveNoteInfo();
+
         // 이미지 할당
         noteImage.setImageURI(uri);
 
 
         updateNoteImagesPerimeter();
-        setMaxScalePosByNoteImage();
+        setMinScalePosByNoteImage();
     }
 
-    private void setMaxScalePosByNoteImage()
+    private void setMinScalePosByNoteImage()
     {
         // Set Scale
         int intrinsicWidth = noteImage.getDrawable().getIntrinsicWidth();
@@ -290,4 +331,74 @@ public class NoteInterface extends ConstraintLayout
         }
     }
 
+
+
+    private File getNoteInfoMetaFile(File noteFile)
+    {
+        return new File(noteFile, "NoteInfo.meta");
+    }
+    private void createNoteFile(File noteFile)
+    {
+        noteInfo = new NoteInfo();
+        noteInfo.noteFile = noteFile;
+        noteInfo.pages = 0;
+        noteInfo.currPage = 0;
+
+        // TODO : 추후 디렉터리를 meta로 연계시, 파일을 만들 때 meta 에 폴더 추가 내용을 갱신해야 함
+
+        new File(noteFile, "pages").mkdirs();
+
+        saveNoteInfo();
+    }
+    private void loadFromNoteFile(File noteFile)
+    {
+        noteInfo = new NoteInfo();
+        noteInfo.noteFile = noteFile;
+
+        try(DataInputStream dis = new DataInputStream(new FileInputStream(getNoteInfoMetaFile(noteFile))))
+        {
+            noteInfo.pages = dis.readShort(); // pages
+        }
+        catch(IOException e)
+        {
+            e.printStackTrace();
+        }
+
+    }
+    private void saveNoteInfo()
+    {
+        try(DataOutputStream dos
+                    = new DataOutputStream(new FileOutputStream(getNoteInfoMetaFile(noteInfo.noteFile))))
+        {
+            dos.writeShort(noteInfo.pages); // pages
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+
+
+
+
+    private File getNotePageFile(File noteFile, short page)
+    {
+        return new File(noteFile + "/pages", String.valueOf(page));
+    }
+
+    private void onToNextButtonClicked()
+    {
+        if(noteInfo.currPage == noteInfo.pages)
+        {
+            if(listener != null)
+            {
+                listener.onAddPhotoClicked(true);
+            }
+        }
+        else
+        {
+            // TODO : 다음 페이지로 이동하기
+        }
+    }
 }
