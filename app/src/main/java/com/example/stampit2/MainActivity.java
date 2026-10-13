@@ -47,8 +47,5 @@ public class MainActivity extends AppCompatActivity
 
 
         noteInterface.initializeNote(new File(getFilesDir(), "TempNote"));
-
-
-        InformUtils.instance().showOnlyInfo(this, "Test");
     }
 }

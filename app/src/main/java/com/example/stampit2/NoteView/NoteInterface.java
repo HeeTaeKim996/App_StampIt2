@@ -21,6 +21,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,7 +30,10 @@ import java.io.InputStream;
 public class NoteInterface extends ConstraintLayout
 {
     private Button toNextButton;
+    private Button toBeforeButton;
     private ImageView noteImage;
+
+
     private Matrix matrix = new Matrix();
     private ScaleGestureDetector scaleGestureDetector;
     private GestureDetector gestureDetector;
@@ -67,9 +71,11 @@ public class NoteInterface extends ConstraintLayout
         super.onFinishInflate();
 
         toNextButton = findViewById(R.id.button_toNext);
+        toBeforeButton = findViewById(R.id.button_toBefore);
         noteImage = findViewById(R.id.noteImage);
 
-        toNextButton.setOnClickListener(view-> { onToNextButtonClicked(); });
+        toNextButton.setOnClickListener(v-> { onToNextButtonClicked(); });
+        toBeforeButton.setOnClickListener(v->{ onToBeforeButtonClicked(); });
 
         Context context = getContext();
 
@@ -154,16 +160,13 @@ public class NoteInterface extends ConstraintLayout
         if(noteInfo.pages > 0)
         {
             noteInfo.currPage = 1;
-            File imageFile = new File(getNotePageFile(noteInfo.noteFile, (short) 1), "Temp");
-            if(imageFile.exists())
+
+            Uri imgUri = loadNoteByPage(getNotePageFile(noteInfo.noteFile, (short)1));
+            if(imgUri != null)
             {
-                Uri savedUri = Uri.fromFile(imageFile);
-                noteImage.setImageURI(savedUri);
+                noteImage.setImageURI(imgUri);
             }
-            else
-            {
-                InformUtils.instance().showOnlyInfo(context, "NoteInterface : 이미지가 없음");
-            }
+
         }
 
 
@@ -197,23 +200,14 @@ public class NoteInterface extends ConstraintLayout
                 {
                     InputStream inputStream = context.getContentResolver().openInputStream(uri);
 
+                    // TODO : page 생성시 초기화 작업 처리
                     File newFile = getNotePageFile(noteInfo.noteFile, (short) (noteInfo.currPage));
                     newFile.mkdir();
-                    File imageFile = new File(newFile, "Temp");
 
-                    FileOutputStream fos = new FileOutputStream(imageFile);
-                    byte[] buffer = new byte[1024];
-                    int len;
-                    while((len = inputStream.read(buffer)) > 0)
-                    {
-                        fos.write(buffer, 0, len);
-                    }
-
-                    fos.flush();
-                    fos.close();
-                    inputStream.close();
+                    saveNoteByPage(newFile, uri);
                 }
-                catch (IOException e)
+
+                catch(IOException e)
                 {
                     e.printStackTrace();
                 }
@@ -398,7 +392,77 @@ public class NoteInterface extends ConstraintLayout
         }
         else
         {
-            // TODO : 다음 페이지로 이동하기
+            noteInfo.currPage++;
+
+            Uri imgUri = loadNoteByPage(getNotePageFile(noteInfo.noteFile, noteInfo.currPage));
+
+            noteImage.setImageURI(imgUri);
+            updateNoteImagesPerimeter();
+            setMinScalePosByNoteImage();
         }
     }
+
+    private void onToBeforeButtonClicked()
+    {
+        if(noteInfo.currPage > 1)
+        {
+            noteInfo.currPage--;
+
+            Uri imgUri = loadNoteByPage(getNotePageFile(noteInfo.noteFile, noteInfo.currPage));
+
+            noteImage.setImageURI(imgUri);
+            updateNoteImagesPerimeter();
+            setMinScalePosByNoteImage();
+        }
+    }
+
+
+
+    private File getNoteVersionFile(File notePageFile, short version)
+    {
+        return new File(notePageFile + "/vs", String.valueOf(version));
+    }
+    private void saveNoteByPage(File noteFile, Uri uri) throws IOException
+    {
+        // TODO : 버전에 대한 메타 데이터 생성
+
+        Context context = getContext();
+
+        // 처음 Page에 대한 저장이므로, 버전은 무조건 1
+        File versionFile = getNoteVersionFile(noteFile, (short)1);
+        versionFile.mkdirs();
+        File imageFile = new File(versionFile, "img");
+
+
+        InputStream inputStream = context.getContentResolver().openInputStream(uri);
+        FileOutputStream fos = new FileOutputStream(imageFile);
+        byte[] buffer = new byte[1024];
+        int len;
+        while((len = inputStream.read(buffer)) > 0)
+        {
+            fos.write(buffer, 0, len);
+        }
+
+        fos.flush();
+        fos.close();
+        inputStream.close();
+    }
+    private Uri loadNoteByPage(File pageFile)
+    {
+        // TODO : 버전에 대한 메타 데이터에 기반하여 마지막 버전의 img 를 리턴
+        
+        Context context = getContext();
+
+        File versionFile = new File(getNoteVersionFile(pageFile, (short)1), "img");
+
+        if(versionFile.exists() == false)
+        {
+            InformUtils.instance().showOnlyInfo(context, 
+                    "NoteInterface : 이미지가 버전 파일이 없거나 버전 파일 내에 img 가 없음");
+            return null;
+        }
+        return Uri.fromFile(versionFile);
+    }
+
+
 }
