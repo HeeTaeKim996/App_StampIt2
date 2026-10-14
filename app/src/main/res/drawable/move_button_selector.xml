@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    // 위에서 아래로 조건을 탐색한다. false 면 아래로 내려가는 방식. 따라서 조건 순서에 유의해야 한다
+
+    <item
+        app:state_drag_outside="true"
+        android:state_pressed="true"
+        android:drawable="@drawable/move_button_outside"/>
+
+    <item
+        android:state_pressed="true"
+        android:drawable="@drawable/move_button_pressed"/>
+
+    <item
+        android:state_enabled="false"
+        android:drawable="@drawable/move_button_disabled"/>
+
+    <item
+        android:drawable="@drawable/move_button_normal"/>
+
+</selector>

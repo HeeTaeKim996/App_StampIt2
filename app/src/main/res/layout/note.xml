@@ -21,14 +21,14 @@
             android:layout_height="wrap_content"
             android:layout_weight="1" />
 
-        <Button
+        <com.example.stampit2.NoteView.MoveButton
             android:id="@+id/button_toBefore"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="B" />
 
-        <Button
+        <com.example.stampit2.NoteView.MoveButton
             android:id="@+id/button_toNext"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

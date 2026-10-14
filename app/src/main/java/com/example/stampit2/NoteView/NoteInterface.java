@@ -2,18 +2,23 @@ package com.example.stampit2.NoteView;
 
 
 import android.content.Context;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.util.AttributeSet;
 import android.graphics.Matrix;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
-import android.widget.Button;
 import android.widget.ImageView;
 
 import androidx.annotation.Nullable;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
 import com.example.stampit2.R;
 import com.example.stampit2.Utils.InformUtils;
 
@@ -21,7 +26,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,8 +33,8 @@ import java.io.InputStream;
 
 public class NoteInterface extends ConstraintLayout
 {
-    private Button toNextButton;
-    private Button toBeforeButton;
+    private MoveButton toNextButton;
+    private MoveButton toBeforeButton;
     private ImageView noteImage;
 
 
@@ -75,7 +79,10 @@ public class NoteInterface extends ConstraintLayout
         noteImage = findViewById(R.id.noteImage);
 
         toNextButton.setOnClickListener(v-> { onToNextButtonClicked(); });
+        toNextButton.setOnOutsideClickedListener(v-> { InformUtils.instance().showOnlyInfo(getContext(), "아웃 체크"); });
+
         toBeforeButton.setOnClickListener(v->{ onToBeforeButtonClicked(); });
+        toBeforeButton.setOnOutsideClickedListener(v-> { InformUtils.instance().showOnlyInfo(getContext(), "아웃 체크"); });
 
         Context context = getContext();
 
@@ -164,7 +171,10 @@ public class NoteInterface extends ConstraintLayout
             Uri imgUri = loadNoteByPage(getNotePageFile(noteInfo.noteFile, (short)1));
             if(imgUri != null)
             {
-                noteImage.setImageURI(imgUri);
+                loadNoteImage(imgUri);
+                
+                // 이미지 로드 성공시, loadNoteImage 의 Glide 에서 비동기로 스케일, 위치 조정하니, 여기서 종료
+                return;
             }
 
         }
@@ -172,7 +182,7 @@ public class NoteInterface extends ConstraintLayout
 
 
 
-        // noteImage 에 이미지가 불러와진 후 발동
+        // 이미지 로드 실패시, 호출
         noteImage.post(()->
         {
             updateNoteImagesPerimeter();
@@ -220,11 +230,7 @@ public class NoteInterface extends ConstraintLayout
         saveNoteInfo();
 
         // 이미지 할당
-        noteImage.setImageURI(uri);
-
-
-        updateNoteImagesPerimeter();
-        setMinScalePosByNoteImage();
+        loadNoteImage(uri);
     }
 
     private void setMinScalePosByNoteImage()
@@ -396,9 +402,7 @@ public class NoteInterface extends ConstraintLayout
 
             Uri imgUri = loadNoteByPage(getNotePageFile(noteInfo.noteFile, noteInfo.currPage));
 
-            noteImage.setImageURI(imgUri);
-            updateNoteImagesPerimeter();
-            setMinScalePosByNoteImage();
+            loadNoteImage(imgUri);
         }
     }
 
@@ -410,9 +414,7 @@ public class NoteInterface extends ConstraintLayout
 
             Uri imgUri = loadNoteByPage(getNotePageFile(noteInfo.noteFile, noteInfo.currPage));
 
-            noteImage.setImageURI(imgUri);
-            updateNoteImagesPerimeter();
-            setMinScalePosByNoteImage();
+            loadNoteImage(imgUri);
         }
     }
 
@@ -464,5 +466,46 @@ public class NoteInterface extends ConstraintLayout
         return Uri.fromFile(versionFile);
     }
 
+    private void loadNoteImage(Uri uri)
+    {
+//        noteImage.setImageURI(uri);
+
+        // ■ Glide
+        // ImageView.setImageURI 는 동기로 데이터를 비트맵에 온전히 로드한다. 카메라 해상도는 굉장히 높기에,
+        // setImageURI 로 로드시 해상도가 높은 사진을 로드시 시간이 오래 걸린다.
+        // Glide 는 외부 라이브러리로, 사진을 ImageView 의 크기에 맞춰 적당한 해상도로 로드하며,
+        // 비동기로 로드한다.
+        //
+        // 아래의 onResourceReady 는 비동기로 사진이 로드된 후에 호출된다.
+        //
+        // ※ Glide 를 사용하려면 build.gradle 에 glide 사용 코드를 추가해야 한다
+        
+        Glide.with(getContext().getApplicationContext())
+                .load(uri)
+                .listener(new RequestListener<Drawable>()
+                {
+                    @Override
+                    public boolean onLoadFailed(GlideException e, Object model, Target<Drawable> target, boolean isFirstResource)
+                    {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource)
+                    {
+                        // 이미지가 비동기로 완전히 로드된 후에, 스케일과 위치를 설정
+                        noteImage.post(()->
+                        {
+                            updateNoteImagesPerimeter();
+                            setMinScalePosByNoteImage();
+                        });
+
+                        return false;
+                    }
+                })
+                .into(noteImage);
+
+
+    }
 
 }
