@@ -1,15 +1,21 @@
 package com.example.stampit2.NoteView;
 
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.database.Cursor;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.provider.OpenableColumns;
 import android.util.AttributeSet;
 import android.graphics.Matrix;
 import android.view.GestureDetector;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -20,7 +26,9 @@ import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 import com.example.stampit2.R;
+import com.example.stampit2.Utils.FileUtils;
 import com.example.stampit2.Utils.InformUtils;
+import com.example.stampit2.databinding.NotePageConfigBinding;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -29,6 +37,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.function.Consumer;
 
 
 public class NoteInterface extends ConstraintLayout
@@ -36,7 +46,7 @@ public class NoteInterface extends ConstraintLayout
     private MoveButton toNextButton;
     private MoveButton toBeforeButton;
     private ImageView noteImage;
-
+    private TextView pageInfo;
 
     private Matrix matrix = new Matrix();
     private ScaleGestureDetector scaleGestureDetector;
@@ -74,15 +84,18 @@ public class NoteInterface extends ConstraintLayout
     {
         super.onFinishInflate();
 
-        toNextButton = findViewById(R.id.button_toNext);
-        toBeforeButton = findViewById(R.id.button_toBefore);
-        noteImage = findViewById(R.id.noteImage);
+        toNextButton = findViewById(R.id.button_note_toNext);
+        toBeforeButton = findViewById(R.id.button_note_toBefore);
+        noteImage = findViewById(R.id.imageview_note_noteImage);
+        pageInfo = findViewById(R.id.textView_note_pageInfo);
+
+        setPageConfigButton();
 
         toNextButton.setOnClickListener(v-> { onToNextButtonClicked(); });
-        toNextButton.setOnOutsideClickedListener(v-> { InformUtils.instance().showOnlyInfo(getContext(), "아웃 체크"); });
+        toNextButton.setOnOutsideClickedListener(v-> { onInsertButtonClicked(true); });
 
         toBeforeButton.setOnClickListener(v->{ onToBeforeButtonClicked(); });
-        toBeforeButton.setOnOutsideClickedListener(v-> { InformUtils.instance().showOnlyInfo(getContext(), "아웃 체크"); });
+        toBeforeButton.setOnOutsideClickedListener(v-> { onInsertButtonClicked(false); });
 
         Context context = getContext();
 
@@ -150,7 +163,6 @@ public class NoteInterface extends ConstraintLayout
 
     public void initializeNote(File noteInfoFile)
     {
-
         if(noteInfoFile.exists() == false)
         {
             createNoteFile(noteInfoFile);
@@ -161,25 +173,19 @@ public class NoteInterface extends ConstraintLayout
         }
 
 
+
+        updateInterfaces();
+
+
+
         Context context = getContext();
 
         // 이미지 로드
-        if(noteInfo.pages > 0)
+        if(noteInfo.pages.size() > 0)
         {
-            noteInfo.currPage = 1;
-
-            Uri imgUri = loadNoteByPage(getNotePageFile(noteInfo.noteFile, (short)1));
-            if(imgUri != null)
-            {
-                loadNoteImage(imgUri);
-                
-                // 이미지 로드 성공시, loadNoteImage 의 Glide 에서 비동기로 스케일, 위치 조정하니, 여기서 종료
-                return;
-            }
-
+            loadImageByCurrPage();
+            return;
         }
-
-
 
 
         // 이미지 로드 실패시, 호출
@@ -200,37 +206,31 @@ public class NoteInterface extends ConstraintLayout
     {
         Context context = getContext();
 
-        if(isNext)
+        noteInfo.currPage = noteInfo.pages.size() == 0 ? (short) 0
+                : (short) (isNext ? noteInfo.currPage + 1 : noteInfo.currPage);
+
+        try
         {
-            if(noteInfo.currPage == noteInfo.pages)
-            {
-                noteInfo.currPage++;
+            // TODO : page 생성시 초기화 작업 처리
+            File newFile = getNotePageFile(noteInfo.noteFile, noteInfo.lastId);
+            newFile.mkdir();
 
-                try
-                {
-                    InputStream inputStream = context.getContentResolver().openInputStream(uri);
-
-                    // TODO : page 생성시 초기화 작업 처리
-                    File newFile = getNotePageFile(noteInfo.noteFile, (short) (noteInfo.currPage));
-                    newFile.mkdir();
-
-                    saveNoteByPage(newFile, uri);
-                }
-
-                catch(IOException e)
-                {
-                    e.printStackTrace();
-                }
-
-            }
+            saveNoteByPage(newFile, uri);
         }
 
-        // 갱신된 데이터 저장
-        noteInfo.pages++;
+        catch(IOException e)
+        {
+            e.printStackTrace();
+            InformUtils.instance().showOnlyInfo(context, "오류 : NoteInterface - insertPage");
+            return;
+        }
+
+
+        noteInfo.pages.add(noteInfo.currPage, noteInfo.lastId++);
         saveNoteInfo();
 
-        // 이미지 할당
-        loadNoteImage(uri);
+        loadImageByCurrPage();
+        updateInterfaces();
     }
 
     private void setMinScalePosByNoteImage()
@@ -341,15 +341,15 @@ public class NoteInterface extends ConstraintLayout
     {
         noteInfo = new NoteInfo();
         noteInfo.noteFile = noteFile;
-        noteInfo.pages = 0;
-        noteInfo.currPage = 0;
+        noteInfo.pages = new ArrayList<Short>();
+        noteInfo.currPage = -1;
+        noteInfo.lastId = 0;
 
-        // TODO : 추후 디렉터리를 meta로 연계시, 파일을 만들 때 meta 에 폴더 추가 내용을 갱신해야 함
-
-        new File(noteFile, "pages").mkdirs();
-
+        new File(noteFile, "p").mkdirs();
         saveNoteInfo();
     }
+
+
     private void loadFromNoteFile(File noteFile)
     {
         noteInfo = new NoteInfo();
@@ -357,12 +357,22 @@ public class NoteInterface extends ConstraintLayout
 
         try(DataInputStream dis = new DataInputStream(new FileInputStream(getNoteInfoMetaFile(noteFile))))
         {
-            noteInfo.pages = dis.readShort(); // pages
+            noteInfo.lastId = dis.readShort();
+
+            int pageSize = dis.readInt();
+            noteInfo.pages = new ArrayList<>(pageSize);
+            while(pageSize-- > 0)
+            {
+                noteInfo.pages.add(dis.readShort());
+            }
         }
         catch(IOException e)
         {
             e.printStackTrace();
+            InformUtils.instance().showOnlyInfo(getContext(), "오류 : NoteInterface - loadFromNoteFile");
         }
+
+        noteInfo.currPage = noteInfo.pages.size() > 0 ? (short) 0 : -1;
 
     }
     private void saveNoteInfo()
@@ -370,7 +380,13 @@ public class NoteInterface extends ConstraintLayout
         try(DataOutputStream dos
                     = new DataOutputStream(new FileOutputStream(getNoteInfoMetaFile(noteInfo.noteFile))))
         {
-            dos.writeShort(noteInfo.pages); // pages
+            dos.writeShort(noteInfo.lastId);
+
+            dos.writeInt(noteInfo.pages.size());
+            for(short id : noteInfo.pages)
+            {
+                dos.writeShort(id);
+            }
         }
         catch (IOException e)
         {
@@ -382,39 +398,46 @@ public class NoteInterface extends ConstraintLayout
 
 
 
-    private File getNotePageFile(File noteFile, short page)
+    private File getNotePageFileByPage(File noteFile, int page)
     {
-        return new File(noteFile + "/pages", String.valueOf(page));
+        return getNotePageFile(noteFile, noteInfo.pages.get(page));
+    }
+    private File getNotePageFile(File noteFile, short pageFileName)
+    {
+        return new File(noteFile + "/p", String.valueOf(pageFileName));
     }
 
     private void onToNextButtonClicked()
     {
-        if(noteInfo.currPage == noteInfo.pages)
-        {
-            if(listener != null)
-            {
-                listener.onAddPhotoClicked(true);
-            }
-        }
-        else
-        {
-            noteInfo.currPage++;
 
-            Uri imgUri = loadNoteByPage(getNotePageFile(noteInfo.noteFile, noteInfo.currPage));
+        noteInfo.currPage++;
 
-            loadNoteImage(imgUri);
-        }
+        loadImageByCurrPage();
+
+        updateInterfaces();
     }
 
     private void onToBeforeButtonClicked()
     {
-        if(noteInfo.currPage > 1)
+        noteInfo.currPage--;
+
+        loadImageByCurrPage();
+
+        updateInterfaces();
+    }
+
+    private void loadImageByCurrPage()
+    {
+        Uri imgUri = loadNoteByPage(getNotePageFileByPage(noteInfo.noteFile, noteInfo.currPage));
+        loadNoteImage(imgUri);
+    }
+
+
+    private void onInsertButtonClicked(boolean isNext)
+    {
+        if(listener != null)
         {
-            noteInfo.currPage--;
-
-            Uri imgUri = loadNoteByPage(getNotePageFile(noteInfo.noteFile, noteInfo.currPage));
-
-            loadNoteImage(imgUri);
+            listener.onAddPhotoClicked(isNext);
         }
     }
 
@@ -422,7 +445,7 @@ public class NoteInterface extends ConstraintLayout
 
     private File getNoteVersionFile(File notePageFile, short version)
     {
-        return new File(notePageFile + "/vs", String.valueOf(version));
+        return new File(notePageFile + "/v", String.valueOf(version));
     }
     private void saveNoteByPage(File noteFile, Uri uri) throws IOException
     {
@@ -433,7 +456,7 @@ public class NoteInterface extends ConstraintLayout
         // 처음 Page에 대한 저장이므로, 버전은 무조건 1
         File versionFile = getNoteVersionFile(noteFile, (short)1);
         versionFile.mkdirs();
-        File imageFile = new File(versionFile, "img");
+        File imageFile = new File(versionFile, getOriginName(uri) + ".img");
 
 
         InputStream inputStream = context.getContentResolver().openInputStream(uri);
@@ -452,18 +475,30 @@ public class NoteInterface extends ConstraintLayout
     private Uri loadNoteByPage(File pageFile)
     {
         // TODO : 버전에 대한 메타 데이터에 기반하여 마지막 버전의 img 를 리턴
-        
+
         Context context = getContext();
 
-        File versionFile = new File(getNoteVersionFile(pageFile, (short)1), "img");
+        File versionFolder = getNoteVersionFile(pageFile, (short)1);
 
-        if(versionFile.exists() == false)
+        if (versionFolder.exists() == false || versionFolder.isDirectory() == false)
         {
-            InformUtils.instance().showOnlyInfo(context, 
-                    "NoteInterface : 이미지가 버전 파일이 없거나 버전 파일 내에 img 가 없음");
+            InformUtils.instance().showOnlyInfo(context,
+                    "NoteInterface : 버전 폴더가 존재하지 않음");
             return null;
         }
-        return Uri.fromFile(versionFile);
+
+        // 폴더 내에서 .img로 끝나는 파일을 검색
+        File[] imageFiles = versionFolder.listFiles((dir, name) -> name.endsWith(".img"));
+
+        if (imageFiles == null || imageFiles.length == 0)
+        {
+            InformUtils.instance().showOnlyInfo(context,
+                    "NoteInterface : 버전 파일 내에 img 가 없음");
+            return null;
+        }
+
+        // 저장된 첫 번째 이미지 파일을 리턴
+        return Uri.fromFile(imageFiles[0]);
     }
 
     private void loadNoteImage(Uri uri)
@@ -504,8 +539,110 @@ public class NoteInterface extends ConstraintLayout
                     }
                 })
                 .into(noteImage);
+    }
+
+    private void updateInterfaces()
+    {
+        if(noteInfo.currPage <= 0)
+        {
+            toBeforeButton.setOnOff(false);
+        }
+        else
+        {
+            toBeforeButton.setOnOff(true);
+        }
+
+        if(noteInfo.currPage == noteInfo.pages.size() - 1)
+        {
+            toNextButton.setOnOff(false);
+        }
+        else
+        {
+            toNextButton.setOnOff(true);
+        }
+
+        pageInfo.setText(String.valueOf(noteInfo.currPage + 1) +
+                " / " + String.valueOf(noteInfo.pages.size()));
+    }
+
+
+
+
+    private String getOriginName(Uri uri)
+    {
+        try (Cursor cursor = getContext().getContentResolver().query(
+                uri,
+                new String[]{OpenableColumns.DISPLAY_NAME},
+                null,
+                null,
+                null))
+        {
+            if (cursor != null && cursor.moveToFirst())
+            {
+                return cursor.getString(
+                        cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME));
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+
+        return "unknown";
+    }
+
+    private void setPageConfigButton()
+    {
+        Context context = getContext();
+
+        Button pageConfigButton = findViewById(R.id.button_note_pageConfig);
+
+        pageConfigButton.setOnClickListener(v->
+        {
+            NotePageConfigBinding binding = NotePageConfigBinding
+                    .inflate(LayoutInflater.from(context));
+            AlertDialog dialog = new AlertDialog.Builder(context).setView(binding.getRoot())
+                    .create();
+
+            binding.buttonNotePageConfigDeletePage.setOnClickListener(v1->
+            {
+                onPageDeleteButtonClicked();
+                dialog.dismiss();
+            });
+
+            binding.buttonNotePageConfigExit.setOnClickListener(v2->
+            {
+                dialog.dismiss();
+            });
+
+
+            dialog.show();
+        });
+    }
+
+    private void onPageDeleteButtonClicked()
+    {
+        if(noteInfo.currPage == -1) return;
+
+        Consumer<Boolean> checkYes = (Boolean bYes)->
+        {
+            if(bYes)
+            {
+                File deleteFile = getNotePageFileByPage(noteInfo.noteFile, noteInfo.currPage);
+                FileUtils.instance().deleteFile(deleteFile);
+
+                noteInfo.pages.remove(noteInfo.currPage);
+                noteInfo.currPage--;
+
+                saveNoteInfo();
+
+                loadImageByCurrPage();
+                updateInterfaces();
+            }
+        };
+
+        InformUtils.instance().showYesOrNo(getContext(), "현 페이지를 삭제하겠습니까?", checkYes);
 
 
     }
-
 }

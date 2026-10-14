@@ -36,6 +36,9 @@ public class MainActivity extends AppCompatActivity
 
 //        FileUtils.instance().clearAllFiles(this);
 
+        InformUtils.instance().showOnlyInfo(this, FileUtils.instance().getAllFiles(this).toString());
+
+
         setContentView(R.layout.note);
 
         noteInterface = findViewById(R.id.noteInterface);

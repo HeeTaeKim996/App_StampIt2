@@ -24,6 +24,11 @@ public class FileUtils
     {
         deleteChildrenFiles(context.getFilesDir());
     }
+    public void deleteFile(File deleted)
+    {
+        deleteChildrenFiles(deleted);
+        deleted.delete();
+    }
     private void deleteChildrenFiles(File me)
     {
         File[] children = me.listFiles();

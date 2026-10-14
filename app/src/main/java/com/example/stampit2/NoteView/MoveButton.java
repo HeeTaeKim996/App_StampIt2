@@ -10,7 +10,6 @@ import java.util.function.Consumer;
 
 public class MoveButton extends androidx.appcompat.widget.AppCompatTextView
 {
-    private boolean bOn = true;
     private Consumer<View> onOutsideClicked;
 
 
@@ -50,7 +49,7 @@ public class MoveButton extends androidx.appcompat.widget.AppCompatTextView
 
     public void setOnOff(boolean inBOn)
     {
-        bOn = inBOn;
+        setEnabled(inBOn);
     }
 
     @Override
@@ -66,8 +65,6 @@ public class MoveButton extends androidx.appcompat.widget.AppCompatTextView
     @Override
     public boolean onTouchEvent(MotionEvent event)
     {
-        if(bOn == false) return false;
-
         switch(event.getActionMasked())
         {
             case MotionEvent.ACTION_DOWN:
@@ -99,7 +96,7 @@ public class MoveButton extends androidx.appcompat.widget.AppCompatTextView
                 {
                     setPressed(false);
 
-                    if(isHover(event))
+                    if(isEnabled() && isHover(event))
                     {
                         // setOnClickListener 에 등록된 함수를 호출
                         performClick();
