@@ -45,7 +45,9 @@ public class NoteInterface extends ConstraintLayout
 {
     private MoveButton toNextButton;
     private MoveButton toBeforeButton;
+
     private ImageView noteImage;
+
     private TextView pageInfo;
 
     private Matrix matrix = new Matrix();
@@ -61,6 +63,14 @@ public class NoteInterface extends ConstraintLayout
 
     private NoteInfo noteInfo;
 
+
+    private enum NoteImageState
+    {
+        NOT_ASSIGNED,
+        ADD_MODE,
+        DRAG_MODE
+    }
+    private NoteImageState noteImageState = NoteImageState.NOT_ASSIGNED;
 
     public static interface OnAddPhotoClickListener
     {
@@ -98,54 +108,6 @@ public class NoteInterface extends ConstraintLayout
         toBeforeButton.setOnOutsideClickedListener(v-> { onInsertButtonClicked(false); });
 
         Context context = getContext();
-
-        // 줌인-줌아웃(스케일), 드래그(아핀 x,y ) 처리
-        scaleGestureDetector = new ScaleGestureDetector(context,
-                new ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                    @Override
-                    public boolean onScale(ScaleGestureDetector detector) {
-                        float scale = detector.getScaleFactor();
-
-
-                        float targetScale = scale * currScale;
-                        targetScale = Math.max(minScale, Math.min(targetScale, minScale * 3.f));
-
-                        float adjustedScale = targetScale / currScale;
-                        currScale = targetScale;
-
-                        // postScale 의 1, 2 는 scale x, y 가 아니라 scale x, y 에 대한 *=
-                        // 따라서 위처럼 adjustedScale 을 따로 구함
-                        matrix.postScale(adjustedScale, adjustedScale, detector.getFocusX(), detector.getFocusY());
-
-                        enforceBounds();
-
-                        noteImage.setImageMatrix(matrix);
-                        return true;
-                    }
-                });
-
-        gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener()
-        {
-            @Override
-            public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY)
-            {
-
-                matrix.postTranslate(-distanceX, -distanceY);
-
-                enforceBounds();
-
-                noteImage.setImageMatrix(matrix);
-                return true;
-            }
-        });
-
-
-        noteImage.setOnTouchListener((v, event)->
-        {
-            scaleGestureDetector.onTouchEvent(event);
-            gestureDetector.onTouchEvent(event);
-            return true;
-        });
     }
 
     // 기기가 가로모드 <-> 세로모드 전환 때 호출. 초기화 때도 호출되지만, 그 때는 noteImage == null
@@ -173,27 +135,7 @@ public class NoteInterface extends ConstraintLayout
         }
 
 
-
         updateInterfaces();
-
-
-
-        Context context = getContext();
-
-        // 이미지 로드
-        if(noteInfo.pages.size() > 0)
-        {
-            loadImageByCurrPage();
-            return;
-        }
-
-
-        // 이미지 로드 실패시, 호출
-        noteImage.post(()->
-        {
-            updateNoteImagesPerimeter();
-            setMinScalePosByNoteImage();
-        });
     }
 
 
@@ -229,7 +171,6 @@ public class NoteInterface extends ConstraintLayout
         noteInfo.pages.add(noteInfo.currPage, noteInfo.lastId++);
         saveNoteInfo();
 
-        loadImageByCurrPage();
         updateInterfaces();
     }
 
@@ -412,16 +353,12 @@ public class NoteInterface extends ConstraintLayout
 
         noteInfo.currPage++;
 
-        loadImageByCurrPage();
-
         updateInterfaces();
     }
 
     private void onToBeforeButtonClicked()
     {
         noteInfo.currPage--;
-
-        loadImageByCurrPage();
 
         updateInterfaces();
     }
@@ -543,6 +480,8 @@ public class NoteInterface extends ConstraintLayout
 
     private void updateInterfaces()
     {
+        updateNoteImageInterface();
+
         if(noteInfo.currPage <= 0)
         {
             toBeforeButton.setOnOff(false);
@@ -561,11 +500,104 @@ public class NoteInterface extends ConstraintLayout
             toNextButton.setOnOff(true);
         }
 
-        pageInfo.setText(String.valueOf(noteInfo.currPage + 1) +
-                " / " + String.valueOf(noteInfo.pages.size()));
+        pageInfo.setText((noteInfo.currPage + 1) + " / " + (noteInfo.pages.size()));
     }
 
 
+
+    private void updateNoteImageInterface()
+    {
+        Context context = getContext();
+
+        if(noteInfo.pages.size() > 0)
+        // 드래그가 가능하도록 처리
+        {
+            loadImageByCurrPage();
+
+            if(noteImageState != NoteImageState.DRAG_MODE)
+            {
+                noteImage.setOnClickListener(null);
+
+
+                // 줌인-줌아웃(스케일), 드래그(아핀 x,y ) 처리
+                scaleGestureDetector = new ScaleGestureDetector(context,
+                        new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                            @Override
+                            public boolean onScale(ScaleGestureDetector detector) {
+                                float scale = detector.getScaleFactor();
+
+
+                                float targetScale = scale * currScale;
+                                targetScale = Math.max(minScale, Math.min(targetScale, minScale * 3.f));
+
+                                float adjustedScale = targetScale / currScale;
+                                currScale = targetScale;
+
+                                // postScale 의 1, 2 는 scale x, y 가 아니라 scale x, y 에 대한 *=
+                                // 따라서 위처럼 adjustedScale 을 따로 구함
+                                matrix.postScale(adjustedScale, adjustedScale, detector.getFocusX(), detector.getFocusY());
+
+                                enforceBounds();
+
+                                noteImage.setImageMatrix(matrix);
+                                return true;
+                            }
+                        });
+
+                gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener()
+                {
+                    @Override
+                    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY)
+                    {
+
+                        matrix.postTranslate(-distanceX, -distanceY);
+
+                        enforceBounds();
+
+                        noteImage.setImageMatrix(matrix);
+                        return true;
+                    }
+                });
+
+
+                noteImage.setOnTouchListener((v, event)->
+                {
+                    scaleGestureDetector.onTouchEvent(event);
+                    gestureDetector.onTouchEvent(event);
+                    return true;
+                });
+
+                noteImageState = NoteImageState.DRAG_MODE;
+            }
+
+
+        }
+        else
+        // 터치시 추가 기능 처리
+        {
+            if(noteImageState != NoteImageState.ADD_MODE)
+            {
+                noteImage.setImageResource(android.R.drawable.btn_plus);
+
+
+                noteImage.setOnTouchListener(null);
+                noteImage.setOnClickListener(v->
+                {
+                    onInsertButtonClicked(true);
+                });
+
+
+                noteImage.post(()->
+                {
+                    updateNoteImagesPerimeter();
+                    setMinScalePosByNoteImage();
+                });
+
+                noteImageState = NoteImageState.ADD_MODE;
+            }
+        }
+
+    }
 
 
     private String getOriginName(Uri uri)
@@ -615,6 +647,12 @@ public class NoteInterface extends ConstraintLayout
                 dialog.dismiss();
             });
 
+            binding.buttonNotePageConfigForDebugListAllFiles.setOnClickListener(v3->
+            {
+                InformUtils.instance().showOnlyInfo(context,
+                        FileUtils.instance().getAllFiles(context).toString());
+                dialog.dismiss();
+            });
 
             dialog.show();
         });
@@ -632,17 +670,69 @@ public class NoteInterface extends ConstraintLayout
                 FileUtils.instance().deleteFile(deleteFile);
 
                 noteInfo.pages.remove(noteInfo.currPage);
+
                 noteInfo.currPage--;
+
+                if(noteInfo.currPage == -1 && noteInfo.pages.size() > 0)
+                {
+                    noteInfo.currPage = 0;
+                }
+
+
+                // lastId 오버플로 배제해도 되지만, 정말 만약을 대비해 정렬 ( 추후 1 이 아니라 편차가 훨씬 클 때만 사용 )
+                if(noteInfo.lastId - noteInfo.pages.size()
+                > 1)
+                {
+                    File parentFile = new File(noteInfo.noteFile, "/p");
+
+                    for(short i = 0; i < noteInfo.pages.size(); i++)
+                    {
+                        File pageFile = getNotePageFileByPage(noteInfo.noteFile, i);
+
+                        if(pageFile.exists() == false)
+                        {
+                            InformUtils.instance().showOnlyInfo(getContext(),
+                                    "오류 : NoteInterface - onPageDeleteButtonClicked 1");
+                            return;
+                        }
+
+                        pageFile.renameTo(new File(parentFile, i + "_"));
+
+                        noteInfo.pages.set(i, i);
+                    }
+
+                    for(short i = 0; i < noteInfo.pages.size(); i++)
+                    {
+                        File pageFile = new File(parentFile, i + "_");
+
+                        if(pageFile.exists() == false)
+                        {
+                            InformUtils.instance().showOnlyInfo(getContext(),
+                                    "오류 : NoteInterface - onPageDeleteButtonClicked 2");
+                            return;
+                        }
+
+                        pageFile.renameTo(new File(parentFile, String.valueOf(i)));
+                    }
+
+                    noteInfo.lastId = (short) noteInfo.pages.size();
+
+                    InformUtils.instance().showOnlyInfo(getContext(), "정렬 성공 : "  + String.valueOf(noteInfo.lastId));
+                }
+
+
+
 
                 saveNoteInfo();
 
-                loadImageByCurrPage();
                 updateInterfaces();
+
+
             }
         };
 
         InformUtils.instance().showYesOrNo(getContext(), "현 페이지를 삭제하겠습니까?", checkYes);
-
-
     }
+
+
 }

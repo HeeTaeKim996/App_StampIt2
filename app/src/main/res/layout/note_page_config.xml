@@ -20,6 +20,12 @@
                 android:text="삭제" />
 
             <Button
+                android:id="@+id/button_notePageConfig_forDebugListAllFiles"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="List All Files" />
+
+            <Button
                 android:id="@+id/button_notePageConfig_exit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

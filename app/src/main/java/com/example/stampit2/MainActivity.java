@@ -34,9 +34,9 @@ public class MainActivity extends AppCompatActivity
     {
         super.onCreate(savedInstanceState);
 
-//        FileUtils.instance().clearAllFiles(this);
+        FileUtils.instance().clearAllFiles(this);
 
-        InformUtils.instance().showOnlyInfo(this, FileUtils.instance().getAllFiles(this).toString());
+//        InformUtils.instance().showOnlyInfo(this, FileUtils.instance().getAllFiles(this).toString());
 
 
         setContentView(R.layout.note);
