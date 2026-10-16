@@ -49,6 +49,16 @@ public class MainActivity extends AppCompatActivity
         });
 
 
-        noteInterface.initializeNote(new File(getFilesDir(), "TempNote"));
+        File tempFile = new File(getFilesDir(), "TempNote");
+        if(tempFile.exists())
+        {
+            noteInterface.initializeNote(tempFile.getPath(), true);
+        }
+        else
+        {
+            noteInterface.initializeNote(tempFile.getPath(), false);
+        }
+
+
     }
 }

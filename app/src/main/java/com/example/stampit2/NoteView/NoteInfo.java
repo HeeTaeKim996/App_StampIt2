@@ -6,9 +6,8 @@ import java.util.HashMap;
 
 public class NoteInfo
 {
-    public File noteFile;
-    public short currPage = 0;
-
     public ArrayList<Short> pages;
+    public ArrayList<Short> sparePages;
+
     public short lastId;
 }

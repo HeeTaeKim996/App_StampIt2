@@ -61,8 +61,8 @@ public class NoteInterface extends ConstraintLayout
     private int noteImageWidth;
     private int noteImageHeight;
 
-    private NoteInfo noteInfo;
-
+    private NoteDataAdmin dataAdmin;
+    private Short currPage;
 
     private enum NoteImageState
     {
@@ -106,8 +106,6 @@ public class NoteInterface extends ConstraintLayout
 
         toBeforeButton.setOnClickListener(v->{ onToBeforeButtonClicked(); });
         toBeforeButton.setOnOutsideClickedListener(v-> { onInsertButtonClicked(false); });
-
-        Context context = getContext();
     }
 
     // 기기가 가로모드 <-> 세로모드 전환 때 호출. 초기화 때도 호출되지만, 그 때는 noteImage == null
@@ -123,17 +121,11 @@ public class NoteInterface extends ConstraintLayout
     }
 
 
-    public void initializeNote(File noteInfoFile)
+    public void initializeNote(String rootPath, boolean isCreating)
     {
-        if(noteInfoFile.exists() == false)
-        {
-            createNoteFile(noteInfoFile);
-        }
-        else
-        {
-            loadFromNoteFile(noteInfoFile);
-        }
+        dataAdmin = new NoteDataAdmin(getContext(), rootPath, isCreating);
 
+        currPage = dataAdmin.getPageSize() > 0 ? (short) 0 : -1;
 
         updateInterfaces();
     }
@@ -146,31 +138,7 @@ public class NoteInterface extends ConstraintLayout
 
     public void insertPage(Uri uri, boolean isNext)
     {
-        Context context = getContext();
-
-        noteInfo.currPage = noteInfo.pages.size() == 0 ? (short) 0
-                : (short) (isNext ? noteInfo.currPage + 1 : noteInfo.currPage);
-
-        try
-        {
-            // TODO : page 생성시 초기화 작업 처리
-            File newFile = getNotePageFile(noteInfo.noteFile, noteInfo.lastId);
-            newFile.mkdir();
-
-            saveNoteByPage(newFile, uri);
-        }
-
-        catch(IOException e)
-        {
-            e.printStackTrace();
-            InformUtils.instance().showOnlyInfo(context, "오류 : NoteInterface - insertPage");
-            return;
-        }
-
-
-        noteInfo.pages.add(noteInfo.currPage, noteInfo.lastId++);
-        saveNoteInfo();
-
+        currPage = dataAdmin.insertPage(uri, currPage, isNext);
         updateInterfaces();
     }
 
@@ -274,98 +242,23 @@ public class NoteInterface extends ConstraintLayout
 
 
 
-    private File getNoteInfoMetaFile(File noteFile)
-    {
-        return new File(noteFile, "NoteInfo.meta");
-    }
-    private void createNoteFile(File noteFile)
-    {
-        noteInfo = new NoteInfo();
-        noteInfo.noteFile = noteFile;
-        noteInfo.pages = new ArrayList<Short>();
-        noteInfo.currPage = -1;
-        noteInfo.lastId = 0;
 
-        new File(noteFile, "p").mkdirs();
-        saveNoteInfo();
-    }
-
-
-    private void loadFromNoteFile(File noteFile)
-    {
-        noteInfo = new NoteInfo();
-        noteInfo.noteFile = noteFile;
-
-        try(DataInputStream dis = new DataInputStream(new FileInputStream(getNoteInfoMetaFile(noteFile))))
-        {
-            noteInfo.lastId = dis.readShort();
-
-            int pageSize = dis.readInt();
-            noteInfo.pages = new ArrayList<>(pageSize);
-            while(pageSize-- > 0)
-            {
-                noteInfo.pages.add(dis.readShort());
-            }
-        }
-        catch(IOException e)
-        {
-            e.printStackTrace();
-            InformUtils.instance().showOnlyInfo(getContext(), "오류 : NoteInterface - loadFromNoteFile");
-        }
-
-        noteInfo.currPage = noteInfo.pages.size() > 0 ? (short) 0 : -1;
-
-    }
-    private void saveNoteInfo()
-    {
-        try(DataOutputStream dos
-                    = new DataOutputStream(new FileOutputStream(getNoteInfoMetaFile(noteInfo.noteFile))))
-        {
-            dos.writeShort(noteInfo.lastId);
-
-            dos.writeInt(noteInfo.pages.size());
-            for(short id : noteInfo.pages)
-            {
-                dos.writeShort(id);
-            }
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-    }
-
-
-
-
-
-    private File getNotePageFileByPage(File noteFile, int page)
-    {
-        return getNotePageFile(noteFile, noteInfo.pages.get(page));
-    }
-    private File getNotePageFile(File noteFile, short pageFileName)
-    {
-        return new File(noteFile + "/p", String.valueOf(pageFileName));
-    }
 
     private void onToNextButtonClicked()
     {
-
-        noteInfo.currPage++;
-
+        currPage++;
         updateInterfaces();
     }
 
     private void onToBeforeButtonClicked()
     {
-        noteInfo.currPage--;
-
+        currPage--;
         updateInterfaces();
     }
 
     private void loadImageByCurrPage()
     {
-        Uri imgUri = loadNoteByPage(getNotePageFileByPage(noteInfo.noteFile, noteInfo.currPage));
+        Uri imgUri = dataAdmin.loadNoteByPage(currPage);
         loadNoteImage(imgUri);
     }
 
@@ -380,63 +273,6 @@ public class NoteInterface extends ConstraintLayout
 
 
 
-    private File getNoteVersionFile(File notePageFile, short version)
-    {
-        return new File(notePageFile + "/v", String.valueOf(version));
-    }
-    private void saveNoteByPage(File noteFile, Uri uri) throws IOException
-    {
-        // TODO : 버전에 대한 메타 데이터 생성
-
-        Context context = getContext();
-
-        // 처음 Page에 대한 저장이므로, 버전은 무조건 1
-        File versionFile = getNoteVersionFile(noteFile, (short)1);
-        versionFile.mkdirs();
-        File imageFile = new File(versionFile, getOriginName(uri) + ".img");
-
-
-        InputStream inputStream = context.getContentResolver().openInputStream(uri);
-        FileOutputStream fos = new FileOutputStream(imageFile);
-        byte[] buffer = new byte[1024];
-        int len;
-        while((len = inputStream.read(buffer)) > 0)
-        {
-            fos.write(buffer, 0, len);
-        }
-
-        fos.flush();
-        fos.close();
-        inputStream.close();
-    }
-    private Uri loadNoteByPage(File pageFile)
-    {
-        // TODO : 버전에 대한 메타 데이터에 기반하여 마지막 버전의 img 를 리턴
-
-        Context context = getContext();
-
-        File versionFolder = getNoteVersionFile(pageFile, (short)1);
-
-        if (versionFolder.exists() == false || versionFolder.isDirectory() == false)
-        {
-            InformUtils.instance().showOnlyInfo(context,
-                    "NoteInterface : 버전 폴더가 존재하지 않음");
-            return null;
-        }
-
-        // 폴더 내에서 .img로 끝나는 파일을 검색
-        File[] imageFiles = versionFolder.listFiles((dir, name) -> name.endsWith(".img"));
-
-        if (imageFiles == null || imageFiles.length == 0)
-        {
-            InformUtils.instance().showOnlyInfo(context,
-                    "NoteInterface : 버전 파일 내에 img 가 없음");
-            return null;
-        }
-
-        // 저장된 첫 번째 이미지 파일을 리턴
-        return Uri.fromFile(imageFiles[0]);
-    }
 
     private void loadNoteImage(Uri uri)
     {
@@ -482,7 +318,7 @@ public class NoteInterface extends ConstraintLayout
     {
         updateNoteImageInterface();
 
-        if(noteInfo.currPage <= 0)
+        if(currPage <= 0)
         {
             toBeforeButton.setOnOff(false);
         }
@@ -491,7 +327,7 @@ public class NoteInterface extends ConstraintLayout
             toBeforeButton.setOnOff(true);
         }
 
-        if(noteInfo.currPage == noteInfo.pages.size() - 1)
+        if(currPage == dataAdmin.getPageSize() - 1)
         {
             toNextButton.setOnOff(false);
         }
@@ -500,7 +336,7 @@ public class NoteInterface extends ConstraintLayout
             toNextButton.setOnOff(true);
         }
 
-        pageInfo.setText((noteInfo.currPage + 1) + " / " + (noteInfo.pages.size()));
+        pageInfo.setText((currPage + 1) + " / " + (dataAdmin.getPageSize()));
     }
 
 
@@ -509,7 +345,7 @@ public class NoteInterface extends ConstraintLayout
     {
         Context context = getContext();
 
-        if(noteInfo.pages.size() > 0)
+        if(dataAdmin.getPageSize() > 0)
         // 드래그가 가능하도록 처리
         {
             loadImageByCurrPage();
@@ -600,29 +436,6 @@ public class NoteInterface extends ConstraintLayout
     }
 
 
-    private String getOriginName(Uri uri)
-    {
-        try (Cursor cursor = getContext().getContentResolver().query(
-                uri,
-                new String[]{OpenableColumns.DISPLAY_NAME},
-                null,
-                null,
-                null))
-        {
-            if (cursor != null && cursor.moveToFirst())
-            {
-                return cursor.getString(
-                        cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME));
-            }
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-
-        return "unknown";
-    }
-
     private void setPageConfigButton()
     {
         Context context = getContext();
@@ -660,74 +473,20 @@ public class NoteInterface extends ConstraintLayout
 
     private void onPageDeleteButtonClicked()
     {
-        if(noteInfo.currPage == -1) return;
+        if(currPage == -1) return;
 
         Consumer<Boolean> checkYes = (Boolean bYes)->
         {
             if(bYes)
             {
-                File deleteFile = getNotePageFileByPage(noteInfo.noteFile, noteInfo.currPage);
-                FileUtils.instance().deleteFile(deleteFile);
+                dataAdmin.deletePage(currPage);
 
-                noteInfo.pages.remove(noteInfo.currPage);
-
-                noteInfo.currPage--;
-
-                if(noteInfo.currPage == -1 && noteInfo.pages.size() > 0)
+                if(--currPage == -1 && dataAdmin.getPageSize() > 0)
                 {
-                    noteInfo.currPage = 0;
+                    currPage = 0;
                 }
-
-
-                // lastId 오버플로 배제해도 되지만, 정말 만약을 대비해 정렬 ( 추후 1 이 아니라 편차가 훨씬 클 때만 사용 )
-                if(noteInfo.lastId - noteInfo.pages.size()
-                > 1)
-                {
-                    File parentFile = new File(noteInfo.noteFile, "/p");
-
-                    for(short i = 0; i < noteInfo.pages.size(); i++)
-                    {
-                        File pageFile = getNotePageFileByPage(noteInfo.noteFile, i);
-
-                        if(pageFile.exists() == false)
-                        {
-                            InformUtils.instance().showOnlyInfo(getContext(),
-                                    "오류 : NoteInterface - onPageDeleteButtonClicked 1");
-                            return;
-                        }
-
-                        pageFile.renameTo(new File(parentFile, i + "_"));
-
-                        noteInfo.pages.set(i, i);
-                    }
-
-                    for(short i = 0; i < noteInfo.pages.size(); i++)
-                    {
-                        File pageFile = new File(parentFile, i + "_");
-
-                        if(pageFile.exists() == false)
-                        {
-                            InformUtils.instance().showOnlyInfo(getContext(),
-                                    "오류 : NoteInterface - onPageDeleteButtonClicked 2");
-                            return;
-                        }
-
-                        pageFile.renameTo(new File(parentFile, String.valueOf(i)));
-                    }
-
-                    noteInfo.lastId = (short) noteInfo.pages.size();
-
-                    InformUtils.instance().showOnlyInfo(getContext(), "정렬 성공 : "  + String.valueOf(noteInfo.lastId));
-                }
-
-
-
-
-                saveNoteInfo();
 
                 updateInterfaces();
-
-
             }
         };
 
