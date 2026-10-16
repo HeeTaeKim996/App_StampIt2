@@ -19,12 +19,12 @@ public class MainActivity extends AppCompatActivity
     private boolean tempIsNext;
     private final ActivityResultLauncher<String> galleryLauncher = registerForActivityResult
             (
-            new ActivityResultContracts.GetContent(),
-            uri->
+            new ActivityResultContracts.GetMultipleContents(),
+            uris->
             {
-                if(uri != null && noteInterface != null)
+                if(noteInterface != null)
                 {
-                    noteInterface.insertPage(uri, tempIsNext);
+                    noteInterface.insertPage(uris, tempIsNext);
                 }
             }
     );
@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity
     {
         super.onCreate(savedInstanceState);
 
-        FileUtils.instance().clearAllFiles(this);
+//        FileUtils.instance().clearAllFiles(this);
 
 //        InformUtils.instance().showOnlyInfo(this, FileUtils.instance().getAllFiles(this).toString());
 
@@ -52,11 +52,11 @@ public class MainActivity extends AppCompatActivity
         File tempFile = new File(getFilesDir(), "TempNote");
         if(tempFile.exists())
         {
-            noteInterface.initializeNote(tempFile.getPath(), true);
+            noteInterface.initializeNote(tempFile.getPath(), false);
         }
         else
         {
-            noteInterface.initializeNote(tempFile.getPath(), false);
+            noteInterface.initializeNote(tempFile.getPath(), true);
         }
 
 

@@ -25,10 +25,12 @@ import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
+import com.example.stampit2.NoteView.PagesView.PagesView;
 import com.example.stampit2.R;
 import com.example.stampit2.Utils.FileUtils;
 import com.example.stampit2.Utils.InformUtils;
-import com.example.stampit2.databinding.NotePageConfigBinding;
+import com.example.stampit2.databinding.NoteConfigBinding;
+import com.example.stampit2.databinding.PagesBinding;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -38,6 +40,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 
@@ -136,9 +139,9 @@ public class NoteInterface extends ConstraintLayout
         listener = inListener;
     }
 
-    public void insertPage(Uri uri, boolean isNext)
+    public void insertPage(List<Uri> uris, boolean isNext)
     {
-        currPage = dataAdmin.insertPage(uri, currPage, isNext);
+        currPage = dataAdmin.insertPage(uris, currPage, isNext);
         updateInterfaces();
     }
 
@@ -440,30 +443,36 @@ public class NoteInterface extends ConstraintLayout
     {
         Context context = getContext();
 
-        Button pageConfigButton = findViewById(R.id.button_note_pageConfig);
+        Button pageConfigButton = findViewById(R.id.button_note_config);
 
         pageConfigButton.setOnClickListener(v->
         {
-            NotePageConfigBinding binding = NotePageConfigBinding
+            NoteConfigBinding binding = NoteConfigBinding
                     .inflate(LayoutInflater.from(context));
             AlertDialog dialog = new AlertDialog.Builder(context).setView(binding.getRoot())
                     .create();
 
-            binding.buttonNotePageConfigDeletePage.setOnClickListener(v1->
+            binding.buttonNoteConfigDeletePage.setOnClickListener(v1->
             {
                 onPageDeleteButtonClicked();
                 dialog.dismiss();
             });
 
-            binding.buttonNotePageConfigExit.setOnClickListener(v2->
+            binding.buttonNoteConfigExit.setOnClickListener(v2->
             {
                 dialog.dismiss();
             });
 
-            binding.buttonNotePageConfigForDebugListAllFiles.setOnClickListener(v3->
+            binding.buttonNoteConfigForDebugListAllFiles.setOnClickListener(v3->
             {
                 InformUtils.instance().showOnlyInfo(context,
                         FileUtils.instance().getAllFiles(context).toString());
+                dialog.dismiss();
+            });
+
+            binding.buttonNoteConfigSettingPages.setOnClickListener(v4->
+            {
+                onSettingPagesButtonClicked();
                 dialog.dismiss();
             });
 
@@ -493,5 +502,15 @@ public class NoteInterface extends ConstraintLayout
         InformUtils.instance().showYesOrNo(getContext(), "현 페이지를 삭제하겠습니까?", checkYes);
     }
 
+    private void onSettingPagesButtonClicked()
+    {
+        Context context = getContext();
+        PagesBinding binding = PagesBinding.inflate(LayoutInflater.from(context));
+        AlertDialog dialog = new AlertDialog.Builder(context).setView(binding.getRoot()).create();
+        dialog.show();
+
+        PagesView pagesView = (PagesView) binding.getRoot();
+        pagesView.initialize(dataAdmin);
+    }
 
 }

@@ -9,17 +9,16 @@ import android.provider.OpenableColumns;
 
 import com.example.stampit2.Utils.FileUtils;
 import com.example.stampit2.Utils.InformUtils;
-import com.example.stampit2.databinding.InformOnlyInfoBinding;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.List;
 
 public class NoteDataAdmin
 {
@@ -27,19 +26,25 @@ public class NoteDataAdmin
     private final String metaPath;
     private final String pagePath;
 
-    private File getSummaryMetaFile()
-    { return new File(metaPath, "sum.met");}
+
     private File getPageMetaFile()
     { return new File(metaPath, "page.met");}
     private File getSparePageMetaFile()
     { return new File(metaPath, "spare.met");}
 
-    private File getNotePageFile(short pageFile)
-    { return new File(pagePath, String.valueOf(noteInfo.pages.get(pageFile))); }
+    private File getNotePageFile(short pageId)
+    { return new File(pagePath, String.valueOf(pageId)); }
 
-    private File getNotePageVersionFile(short page, short version)
+    private File getNotePageFileByPage(short page)
+    { return getNotePageFile(noteInfo.pages.get(page)); }
+
+
+    private File getNotePageVersionFile(short pageId, short version)
     { return new File(pagePath + "/"
-            + noteInfo.pages.get(page) + "/v/" + String.valueOf(version));}
+            + pageId + "/v/" + String.valueOf(version));}
+
+    private File getNotePageVersionFileByPage(short page, short version)
+    { return getNotePageVersionFile(noteInfo.pages.get(page), version); }
 
 
 
@@ -93,30 +98,18 @@ public class NoteDataAdmin
 
     private void saveAllMeta()
     {
-        saveSummaryMeta();
         savePageMeta();
         saveSparePageMeta();
     }
 
-    private void saveSummaryMeta()
-    {
-        try(DataOutputStream dos
-                    = new DataOutputStream(new FileOutputStream(getSummaryMetaFile())))
-        {
-            dos.writeShort(noteInfo.lastId);
-        }
-        catch(IOException e)
-        {
-            e.printStackTrace();
-            InformUtils.instance().showOnlyInfo(appContext,
-                    "오류 : NoteDataAdmin - saveSummaryMeta");
-        }
-    }
+
     private void savePageMeta()
     {
         try(DataOutputStream dos
                 = new DataOutputStream(new FileOutputStream(getPageMetaFile())))
         {
+            dos.writeShort(noteInfo.lastId);
+
             dos.writeInt(noteInfo.pages.size());
             for(short id : noteInfo.pages)
             {
@@ -155,13 +148,10 @@ public class NoteDataAdmin
         try
         {
             try(DataInputStream dis
-                        = new DataInputStream(new FileInputStream(getSummaryMetaFile())))
-            {
-                noteInfo.lastId = dis.readShort();
-            }
-            try(DataInputStream dis
                         = new DataInputStream(new FileInputStream(getPageMetaFile())))
             {
+                noteInfo.lastId = dis.readShort();
+
                 int pageSize = dis.readInt();
                 noteInfo.pages = new ArrayList<>(pageSize);
                 while(pageSize-- > 0)
@@ -193,27 +183,65 @@ public class NoteDataAdmin
 
 
 
-    public short insertPage(Uri uri, short currPage, boolean isNext)
+    public short insertPage(List<Uri> uris, short currPage, boolean isNext)
     {
         currPage = noteInfo.pages.size() == 0 ? (short) 0
                 : (short) (isNext ? currPage + 1 : currPage);
+        short pageIndex = currPage;
 
-        saveNoteByPage(uri, noteInfo.lastId);
+        boolean isSpareUpdated = false;
+        boolean isPageUpdated = false;
+        boolean isSpareEmpty = noteInfo.sparePages.isEmpty();
 
-        noteInfo.pages.add(currPage, noteInfo.lastId++);
+        for(int uriIndex = 0;  uriIndex < uris.size(); ++uriIndex)
+        {
+            Uri uri = uris.get(uriIndex);
+            if(uri == null) continue;
 
-        saveSummaryMeta();
-        savePageMeta();
+
+            if(isSpareEmpty)
+            {
+                saveNoteByPage(uri, noteInfo.lastId);
+                noteInfo.pages.add(pageIndex, noteInfo.lastId++);
+            }
+            else
+            {
+                int lastIndex = noteInfo.sparePages.size() - 1;
+                short id = noteInfo.sparePages.get(lastIndex);
+                noteInfo.sparePages.remove(lastIndex);
+
+                saveNoteByPage(uri, id);
+                noteInfo.pages.add(pageIndex, id);
+
+                saveSparePageMeta();
+
+                isSpareUpdated = true;
+                isSpareEmpty = noteInfo.sparePages.isEmpty();
+            }
+
+            ++pageIndex;
+
+            isPageUpdated = true;
+        }
+
+        if(isPageUpdated)
+        {
+            savePageMeta();
+        }
+        if(isSpareUpdated)
+        {
+            saveSparePageMeta();
+        }
 
         return currPage;
     }
 
 
-    private void saveNoteByPage(Uri uri, short page)
+    private void saveNoteByPage(Uri uri, short pageId)
     {
         // TODO : 버전에 대한 메타 데이터 생성
 
-        File versionFile = getNotePageVersionFile(page, (short) 1);
+        File versionFile = getNotePageVersionFile(pageId, (short) 1);
         versionFile.mkdirs();
         File imageFile = new File(versionFile, getOriginName(uri) + ".img");
 
@@ -248,7 +276,7 @@ public class NoteDataAdmin
     {
         noteInfo.sparePages.add(noteInfo.pages.get(page));
 
-        File deletedFile = getNotePageFile(page);
+        File deletedFile = getNotePageFileByPage(page);
         FileUtils.instance().deleteFile(deletedFile);
 
         noteInfo.pages.remove(page);
@@ -291,7 +319,7 @@ public class NoteDataAdmin
     {
         // TODO : 버전에 대한 메타 데이터에 기반하여 마지막 버전의 img 를 리턴
 
-        File versionFile = getNotePageVersionFile(noteInfo.pages.get(page), (short) 1);
+        File versionFile = getNotePageVersionFileByPage(page, (short) 1);
 
         if(versionFile.exists() == false || versionFile.isDirectory() == false)
         {
