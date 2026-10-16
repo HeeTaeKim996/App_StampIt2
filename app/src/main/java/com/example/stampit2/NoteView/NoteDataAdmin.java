@@ -87,7 +87,6 @@ public class NoteDataAdmin
     {
         noteInfo.pages = new ArrayList<Short>();
         noteInfo.sparePages = new ArrayList<Short>();
-        noteInfo.lastId = 0;
 
         new File(pagePath).mkdirs();
         new File(metaPath).mkdirs();
@@ -108,8 +107,6 @@ public class NoteDataAdmin
         try(DataOutputStream dos
                 = new DataOutputStream(new FileOutputStream(getPageMetaFile())))
         {
-            dos.writeShort(noteInfo.lastId);
-
             dos.writeInt(noteInfo.pages.size());
             for(short id : noteInfo.pages)
             {
@@ -150,8 +147,6 @@ public class NoteDataAdmin
             try(DataInputStream dis
                         = new DataInputStream(new FileInputStream(getPageMetaFile())))
             {
-                noteInfo.lastId = dis.readShort();
-
                 int pageSize = dis.readInt();
                 noteInfo.pages = new ArrayList<>(pageSize);
                 while(pageSize-- > 0)
@@ -201,8 +196,9 @@ public class NoteDataAdmin
 
             if(isSpareEmpty)
             {
-                saveNoteByPage(uri, noteInfo.lastId);
-                noteInfo.pages.add(pageIndex, noteInfo.lastId++);
+                short pageId = (short) noteInfo.pages.size();
+                saveNoteByPage(uri, pageId);
+                noteInfo.pages.add(pageIndex, pageId);
             }
             else
             {
