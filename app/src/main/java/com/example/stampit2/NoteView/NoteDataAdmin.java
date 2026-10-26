@@ -17,6 +17,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -281,6 +282,37 @@ public class NoteDataAdmin
         saveSparePageMeta();
     }
 
+    public void deletePages(ArrayList<Short> deletingPages)
+    {
+        if(deletingPages.get(deletingPages.size() - 1) >= noteInfo.pages.size())
+        {
+            InformUtils.instance().showOnlyInfo(appContext, "NoteDataAdmin - deletePages : 오류");
+            return;
+        }
+
+        for(int i = deletingPages.size() - 1; i >= 0; i--)
+        {
+            short deleteId = deletingPages.get(i);
+            noteInfo.sparePages.add(noteInfo.pages.get(deleteId));
+
+            File deletedFile = getNotePageFileByPage(deleteId);
+            FileUtils.instance().deleteFile(deletedFile);
+
+            noteInfo.pages.remove(deleteId);
+        }
+
+        savePageMeta();
+        saveSparePageMeta();
+    }
+
+    public void movePage(short from, short to)
+    {
+        short fromId = noteInfo.pages.get(from);
+        noteInfo.pages.remove(from);
+        noteInfo.pages.add(to, fromId);
+
+        savePageMeta();
+    }
 
 
 

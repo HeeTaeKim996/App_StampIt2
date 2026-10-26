@@ -3,16 +3,16 @@ package com.example.stampit2.NoteView;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.database.Cursor;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.provider.OpenableColumns;
 import android.util.AttributeSet;
 import android.graphics.Matrix;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -26,21 +26,15 @@ import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 import com.example.stampit2.NoteView.PagesView.PagesView;
+import com.example.stampit2.NoteView.PagesView.PagesViewListener;
 import com.example.stampit2.R;
 import com.example.stampit2.Utils.FileUtils;
 import com.example.stampit2.Utils.InformUtils;
 import com.example.stampit2.databinding.NoteConfigBinding;
 import com.example.stampit2.databinding.PagesBinding;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 
@@ -507,10 +501,39 @@ public class NoteInterface extends ConstraintLayout
         Context context = getContext();
         PagesBinding binding = PagesBinding.inflate(LayoutInflater.from(context));
         AlertDialog dialog = new AlertDialog.Builder(context).setView(binding.getRoot()).create();
+
         dialog.show();
+        if(dialog.getWindow() != null)
+        {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.white);
+
+            dialog.getWindow().setLayout(
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.MATCH_PARENT);
+        }
+
+
+
+
 
         PagesView pagesView = (PagesView) binding.getRoot();
-        pagesView.initialize(dataAdmin);
+
+        Runnable closeView = ()->
+        {
+            dialog.dismiss();
+            currPage = pagesView.getCurrPage();
+            updateInterfaces();
+        };
+
+        pagesView.initialize(dataAdmin, currPage, closeView);
+
+
+
+        pagesView.findViewById(R.id.button_pages_exit).setOnClickListener(v->
+        {
+            closeView.run();
+        });
     }
+
 
 }

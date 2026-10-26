@@ -39,7 +39,8 @@
             android:id="@+id/textView_note_pageInfo"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1"
+            android:layout_weight="2"
+            android:gravity="center_vertical|end"
             android:text="0/0" />
 
         <Button
