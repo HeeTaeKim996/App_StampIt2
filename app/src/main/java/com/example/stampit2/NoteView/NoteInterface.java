@@ -3,11 +3,13 @@ package com.example.stampit2.NoteView;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.util.AttributeSet;
 import android.graphics.Matrix;
 import android.view.GestureDetector;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -64,23 +66,31 @@ public class NoteInterface extends ConstraintLayout
         ADD_MODE,
         DRAG_MODE
     }
+
     private NoteImageState noteImageState = NoteImageState.NOT_ASSIGNED;
 
     public static interface OnAddPhotoClickListener
     {
         void onAddPhotoClicked(boolean isNext);
     }
+
     private OnAddPhotoClickListener listener;
 
 
     public NoteInterface(Context context)
-    { super(context); }
+    {
+        super(context);
+    }
 
     public NoteInterface(Context context, @Nullable AttributeSet attrs)
-    { super(context, attrs); }
+    {
+        super(context, attrs);
+    }
 
     public NoteInterface(Context context, @Nullable AttributeSet attrs, int defStyleAttr)
-    { super(context, attrs, defStyleAttr); }
+    {
+        super(context, attrs, defStyleAttr);
+    }
 
 
     @Override
@@ -95,11 +105,23 @@ public class NoteInterface extends ConstraintLayout
 
         setPageConfigButton();
 
-        toNextButton.setOnClickListener(v-> { toNextPage(); });
-        toNextButton.setOnOutsideClickedListener(v-> { onInsertButtonClicked(true); });
+        toNextButton.setOnClickListener(v ->
+        {
+            toNextPage();
+        });
+        toNextButton.setOnOutsideClickedListener(v ->
+        {
+            onInsertButtonClicked(true);
+        });
 
-        toBeforeButton.setOnClickListener(v->{ toBeforePage(); });
-        toBeforeButton.setOnOutsideClickedListener(v-> { onInsertButtonClicked(false); });
+        toBeforeButton.setOnClickListener(v ->
+        {
+            toBeforePage();
+        });
+        toBeforeButton.setOnOutsideClickedListener(v ->
+        {
+            onInsertButtonClicked(false);
+        });
     }
 
     // 기기가 가로모드 <-> 세로모드 전환 때 호출. 초기화 때도 호출되지만, 그 때는 noteImage == null
@@ -108,7 +130,7 @@ public class NoteInterface extends ConstraintLayout
     {
         super.onSizeChanged(w, h, oldw, oldh);
 
-        if(noteImage == null || noteImage.getDrawable() == null) return;
+        if (noteImage == null || noteImage.getDrawable() == null) return;
 
         updateNoteImagesPerimeter();
         setMinScalePosByNoteImage();
@@ -181,7 +203,7 @@ public class NoteInterface extends ConstraintLayout
         curr = metValues[Matrix.MTRANS_X];
         float moveX = 0;
 
-        if(noteImageWidth > scaledIntrinsic)
+        if (noteImageWidth > scaledIntrinsic)
         // 사진이 화면 안에서 이동
         {
             // Deprecated ( 사진이 화면 안을 이동하는 코드였는데 폐기)
@@ -190,24 +212,22 @@ public class NoteInterface extends ConstraintLayout
 
             // 사진을 중앙 정렬
             float aimX = (noteImageWidth - scaledIntrinsic) / 2.f;
-            if(curr != aimX)
+            if (curr != aimX)
             {
                 changed = true;
                 moveX = aimX - curr;
             }
-        }
-        else
+        } else
         // 화면이 사진 안에서 이동
         {
             min = noteImageWidth - scaledIntrinsic;   // 화면이 사진의 오른쪽에 붙음
             max = 0;                                  // 화면이 사진의 왼쪽에 붙음
 
-            if(curr < min)
+            if (curr < min)
             {
                 changed = true;
                 moveX = min - curr;
-            }
-            else if(curr > max)
+            } else if (curr > max)
             {
                 changed = true;
                 moveX = max - curr;
@@ -217,53 +237,46 @@ public class NoteInterface extends ConstraintLayout
         }
 
 
-
-
         // Y ( X 와 대칭 )
         scaledIntrinsic = currScale * noteImage.getDrawable().getIntrinsicHeight();
         curr = metValues[Matrix.MTRANS_Y];
         float moveY = 0;
 
-        if(noteImageHeight > scaledIntrinsic)
+        if (noteImageHeight > scaledIntrinsic)
         {
             // Deprecated
 //            min = 0;
 //            max = noteImageHeight - scaledIntrinsic;
 
             float aimY = (noteImageHeight - scaledIntrinsic) / 2.f;
-            if(curr != aimY)
+            if (curr != aimY)
             {
                 changed = true;
                 moveY = aimY - curr;
             }
-        }
-        else
+        } else
         {
             min = noteImageHeight - scaledIntrinsic;
             max = 0;
 
 
-            if(curr < min)
+            if (curr < min)
             {
                 changed = true;
                 moveY = min - curr;
-            }
-            else if(curr > max)
+            } else if (curr > max)
             {
                 changed = true;
                 moveY = max - curr;
             }
         }
 
-        
-        if(changed)
+
+        if (changed)
         {
             matrix.postTranslate(moveX, moveY);
         }
     }
-
-
-
 
 
     private void toNextPage()
@@ -287,13 +300,11 @@ public class NoteInterface extends ConstraintLayout
 
     private void onInsertButtonClicked(boolean isNext)
     {
-        if(listener != null)
+        if (listener != null)
         {
             listener.onAddPhotoClicked(isNext);
         }
     }
-
-
 
 
     private void loadNoteImage(Uri uri)
@@ -309,7 +320,7 @@ public class NoteInterface extends ConstraintLayout
         // 아래의 onResourceReady 는 비동기로 사진이 로드된 후에 호출된다.
         //
         // ※ Glide 를 사용하려면 build.gradle 에 glide 사용 코드를 추가해야 한다
-        
+
         Glide.with(getContext().getApplicationContext())
                 .load(uri)
                 .listener(new RequestListener<Drawable>()
@@ -324,7 +335,7 @@ public class NoteInterface extends ConstraintLayout
                     public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource)
                     {
                         // 이미지가 비동기로 완전히 로드된 후에, 스케일과 위치를 설정
-                        noteImage.post(()->
+                        noteImage.post(() ->
                         {
                             updateNoteImagesPerimeter();
                             setMinScalePosByNoteImage();
@@ -340,20 +351,18 @@ public class NoteInterface extends ConstraintLayout
     {
         updateNoteImageInterface();
 
-        if(currPage <= 0)
+        if (currPage <= 0)
         {
             toBeforeButton.setOnOff(false);
-        }
-        else
+        } else
         {
             toBeforeButton.setOnOff(true);
         }
 
-        if(currPage == dataAdmin.getPageSize() - 1)
+        if (currPage == dataAdmin.getPageSize() - 1)
         {
             toNextButton.setOnOff(false);
-        }
-        else
+        } else
         {
             toNextButton.setOnOff(true);
         }
@@ -362,26 +371,27 @@ public class NoteInterface extends ConstraintLayout
     }
 
 
-
     private void updateNoteImageInterface()
     {
         Context context = getContext();
 
-        if(dataAdmin.getPageSize() > 0)
+        if (dataAdmin.getPageSize() > 0)
         // 드래그가 가능하도록 처리
         {
             loadImageByCurrPage();
 
-            if(noteImageState != NoteImageState.DRAG_MODE)
+            if (noteImageState != NoteImageState.DRAG_MODE)
             {
                 noteImage.setOnClickListener(null);
 
 
                 // 줌인-줌아웃(스케일), 드래그(아핀 x,y ) 처리
                 scaleGestureDetector = new ScaleGestureDetector(context,
-                        new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                        new ScaleGestureDetector.SimpleOnScaleGestureListener()
+                        {
                             @Override
-                            public boolean onScale(ScaleGestureDetector detector) {
+                            public boolean onScale(ScaleGestureDetector detector)
+                            {
                                 float scale = detector.getScaleFactor();
 
 
@@ -408,7 +418,7 @@ public class NoteInterface extends ConstraintLayout
                     @Override
                     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY)
                     {
-                        if(currScale > minScale)
+                        if (currScale > minScale)
                         {
                             matrix.postTranslate(-distanceX, -distanceY);
 
@@ -425,33 +435,32 @@ public class NoteInterface extends ConstraintLayout
 
                     @Override
                     public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY)
-                        // e1 : 시작점. e2 : 끝점
+                    // e1 : 시작점. e2 : 끝점
                     {
-                        if(currScale > minScale) return false;
-                        if(e1 == null || e2 == null) return false;
+                        if (currScale > minScale) return false;
+                        if (e1 == null || e2 == null) return false;
 
                         float dx = e2.getX() - e1.getX();
                         float dy = e2.getY() - e1.getY();
 
                         // 가로방향이 우세한 스와이프만 인정
-                        if(Math.abs(dx) < Math.abs(dy)) return false;
+                        if (Math.abs(dx) < Math.abs(dy)) return false;
 
-                        if(Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(velocityX) < SWIPE_MIN_VELOCITY)
+                        if (Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(velocityX) < SWIPE_MIN_VELOCITY)
                         {
                             int i = 0;
                             return false;
                         }
 
-                        if(dx < 0)
+                        if (dx < 0)
                         {
-                            if(currPage < dataAdmin.getPageSize() - 1)
+                            if (currPage < dataAdmin.getPageSize() - 1)
                             {
                                 toNextPage();
                             }
-                        }
-                        else
+                        } else
                         {
-                            if(currPage > 0)
+                            if (currPage > 0)
                             {
                                 toBeforePage();
                             }
@@ -462,9 +471,7 @@ public class NoteInterface extends ConstraintLayout
                 });
 
 
-
-
-                noteImage.setOnTouchListener((v, event)->
+                noteImage.setOnTouchListener((v, event) ->
                 {
                     scaleGestureDetector.onTouchEvent(event);
                     gestureDetector.onTouchEvent(event);
@@ -475,23 +482,22 @@ public class NoteInterface extends ConstraintLayout
             }
 
 
-        }
-        else
+        } else
         // 터치시 추가 기능 처리
         {
-            if(noteImageState != NoteImageState.ADD_MODE)
+            if (noteImageState != NoteImageState.ADD_MODE)
             {
                 noteImage.setImageResource(android.R.drawable.btn_plus);
 
 
                 noteImage.setOnTouchListener(null);
-                noteImage.setOnClickListener(v->
+                noteImage.setOnClickListener(v ->
                 {
                     onInsertButtonClicked(true);
                 });
 
 
-                noteImage.post(()->
+                noteImage.post(() ->
                 {
                     updateNoteImagesPerimeter();
                     setMinScalePosByNoteImage();
@@ -510,32 +516,32 @@ public class NoteInterface extends ConstraintLayout
 
         Button pageConfigButton = findViewById(R.id.button_note_config);
 
-        pageConfigButton.setOnClickListener(v->
+        pageConfigButton.setOnClickListener(v ->
         {
             NoteConfigBinding binding = NoteConfigBinding
                     .inflate(LayoutInflater.from(context));
             AlertDialog dialog = new AlertDialog.Builder(context).setView(binding.getRoot())
                     .create();
 
-            binding.buttonNoteConfigDeletePage.setOnClickListener(v1->
+            binding.buttonNoteConfigDeletePage.setOnClickListener(v1 ->
             {
                 onPageDeleteButtonClicked();
                 dialog.dismiss();
             });
 
-            binding.buttonNoteConfigExit.setOnClickListener(v2->
+            binding.buttonNoteConfigExit.setOnClickListener(v2 ->
             {
                 dialog.dismiss();
             });
 
-            binding.buttonNoteConfigForDebugListAllFiles.setOnClickListener(v3->
+            binding.buttonNoteConfigForDebugListAllFiles.setOnClickListener(v3 ->
             {
                 InformUtils.instance().showOnlyInfo(context,
                         FileUtils.instance().getAllFiles(context).toString());
                 dialog.dismiss();
             });
 
-            binding.buttonNoteConfigSettingPages.setOnClickListener(v4->
+            binding.buttonNoteConfigSettingPages.setOnClickListener(v4 ->
             {
                 onSettingPagesButtonClicked();
                 dialog.dismiss();
@@ -547,15 +553,15 @@ public class NoteInterface extends ConstraintLayout
 
     private void onPageDeleteButtonClicked()
     {
-        if(currPage == -1) return;
+        if (currPage == -1) return;
 
-        Consumer<Boolean> checkYes = (Boolean bYes)->
+        Consumer<Boolean> checkYes = (Boolean bYes) ->
         {
-            if(bYes)
+            if (bYes)
             {
                 dataAdmin.deletePage(currPage);
 
-                if(--currPage == -1 && dataAdmin.getPageSize() > 0)
+                if (--currPage == -1 && dataAdmin.getPageSize() > 0)
                 {
                     currPage = 0;
                 }
@@ -574,7 +580,7 @@ public class NoteInterface extends ConstraintLayout
         AlertDialog dialog = new AlertDialog.Builder(context).setView(binding.getRoot()).create();
 
         dialog.show();
-        if(dialog.getWindow() != null)
+        if (dialog.getWindow() != null)
         {
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.white);
 
@@ -584,23 +590,44 @@ public class NoteInterface extends ConstraintLayout
         }
 
 
-
-
-
         PagesView pagesView = (PagesView) binding.getRoot();
 
-        Runnable closeView = ()->
+        Runnable closeView = () ->
         {
             dialog.dismiss();
             currPage = pagesView.getCurrPage();
             updateInterfaces();
         };
 
+        dialog.setOnKeyListener(new DialogInterface.OnKeyListener()
+            {
+                @Override
+                public boolean onKey(DialogInterface dialogInterface, int keyCode, KeyEvent keyEvent)
+                {
+                    if(keyCode == KeyEvent.KEYCODE_BACK
+                            && keyEvent.getAction() == KeyEvent.ACTION_DOWN)
+                    {
+                        if(pagesView.isSelectMode())
+                        {
+                            pagesView.toNotSelectMode();
+                        }
+                        else
+                        {
+                            closeView.run();
+                        }
+
+                        return true; // 이벤트를 소비하여, 기존 onKey 발동되지 않음
+                    }
+
+                    return false; // 이벤트를 소비하지 않아, 기존 onKey 가 발동
+                }
+            }
+        );
+
         pagesView.initialize(dataAdmin, currPage, closeView);
 
 
-
-        pagesView.findViewById(R.id.button_pages_exit).setOnClickListener(v->
+        pagesView.findViewById(R.id.button_pages_exit).setOnClickListener(v ->
         {
             closeView.run();
         });

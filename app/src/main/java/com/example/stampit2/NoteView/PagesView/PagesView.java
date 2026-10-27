@@ -63,15 +63,11 @@ public class PagesView extends LinearLayout
         {
             if(adapter.isSelectMode())
             {
-                selectButton.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.purple_500));
-                adapter.onSelectButtonClicked(false);
-                bottomLayout.setVisibility(GONE);
+                toNotSelectMode();
             }
             else
             {
-                selectButton.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.light_green));
-                adapter.onSelectButtonClicked(true);
-                bottomLayout.setVisibility(VISIBLE);
+                toSelectMode();
             }
         });
 
@@ -96,5 +92,21 @@ public class PagesView extends LinearLayout
     public void closeView()
     {
         closeViewListener.run();
+    }
+
+    public boolean isSelectMode() { return adapter.isSelectMode();}
+
+    public void toNotSelectMode()
+    {
+        selectButton.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.purple_500));
+        adapter.onSelectButtonClicked(false);
+        bottomLayout.setVisibility(GONE);
+    }
+
+    private void toSelectMode()
+    {
+        selectButton.setBackgroundColor(ContextCompat.getColor(getContext(), R.color.light_green));
+        adapter.onSelectButtonClicked(true);
+        bottomLayout.setVisibility(VISIBLE);
     }
 }
