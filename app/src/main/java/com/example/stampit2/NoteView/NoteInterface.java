@@ -11,7 +11,6 @@ import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
-import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -26,7 +25,6 @@ import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 import com.example.stampit2.NoteView.PagesView.PagesView;
-import com.example.stampit2.NoteView.PagesView.PagesViewListener;
 import com.example.stampit2.R;
 import com.example.stampit2.Utils.FileUtils;
 import com.example.stampit2.Utils.InformUtils;
@@ -34,7 +32,6 @@ import com.example.stampit2.databinding.NoteConfigBinding;
 import com.example.stampit2.databinding.PagesBinding;
 
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 
@@ -98,10 +95,10 @@ public class NoteInterface extends ConstraintLayout
 
         setPageConfigButton();
 
-        toNextButton.setOnClickListener(v-> { onToNextButtonClicked(); });
+        toNextButton.setOnClickListener(v-> { toNextPage(); });
         toNextButton.setOnOutsideClickedListener(v-> { onInsertButtonClicked(true); });
 
-        toBeforeButton.setOnClickListener(v->{ onToBeforeButtonClicked(); });
+        toBeforeButton.setOnClickListener(v->{ toBeforePage(); });
         toBeforeButton.setOnOutsideClickedListener(v-> { onInsertButtonClicked(false); });
     }
 
@@ -179,58 +176,86 @@ public class NoteInterface extends ConstraintLayout
 
         // X
         scaledIntrinsic = currScale * noteImage.getDrawable().getIntrinsicWidth();
+
+
+        curr = metValues[Matrix.MTRANS_X];
+        float moveX = 0;
+
         if(noteImageWidth > scaledIntrinsic)
         // 사진이 화면 안에서 이동
         {
-            min = 0;                                  // 사진이 화면의 왼쪽에 붙음
-            max = noteImageWidth - scaledIntrinsic;   // 사진이 화면의 오른쪽에 붙음
+            // Deprecated ( 사진이 화면 안을 이동하는 코드였는데 폐기)
+//            min = 0;                                  // 사진이 화면의 왼쪽에 붙음
+//            max = noteImageWidth - scaledIntrinsic;   // 사진이 화면의 오른쪽에 붙음
+
+            // 사진을 중앙 정렬
+            float aimX = (noteImageWidth - scaledIntrinsic) / 2.f;
+            if(curr != aimX)
+            {
+                changed = true;
+                moveX = aimX - curr;
+            }
         }
         else
         // 화면이 사진 안에서 이동
         {
             min = noteImageWidth - scaledIntrinsic;   // 화면이 사진의 오른쪽에 붙음
             max = 0;                                  // 화면이 사진의 왼쪽에 붙음
+
+            if(curr < min)
+            {
+                changed = true;
+                moveX = min - curr;
+            }
+            else if(curr > max)
+            {
+                changed = true;
+                moveX = max - curr;
+            }
+
+
         }
-        curr = metValues[Matrix.MTRANS_X];
-        float moveX = 0;
-        if(curr < min)
-        {
-            changed = true;
-            moveX = min - curr;
-        }
-        else if(curr > max)
-        {
-            changed = true;
-            moveX = max - curr;
-        }
+
+
 
 
         // Y ( X 와 대칭 )
         scaledIntrinsic = currScale * noteImage.getDrawable().getIntrinsicHeight();
+        curr = metValues[Matrix.MTRANS_Y];
+        float moveY = 0;
+
         if(noteImageHeight > scaledIntrinsic)
         {
-            min = 0;
-            max = noteImageHeight - scaledIntrinsic;
+            // Deprecated
+//            min = 0;
+//            max = noteImageHeight - scaledIntrinsic;
+
+            float aimY = (noteImageHeight - scaledIntrinsic) / 2.f;
+            if(curr != aimY)
+            {
+                changed = true;
+                moveY = aimY - curr;
+            }
         }
         else
         {
             min = noteImageHeight - scaledIntrinsic;
             max = 0;
-        }
-        curr = metValues[Matrix.MTRANS_Y];
-        float moveY = 0;
-        if(curr < min)
-        {
-            changed = true;
-            moveY = min - curr;
-        }
-        else if(curr > max)
-        {
-            changed = true;
-            moveY = max - curr;
-        }
 
 
+            if(curr < min)
+            {
+                changed = true;
+                moveY = min - curr;
+            }
+            else if(curr > max)
+            {
+                changed = true;
+                moveY = max - curr;
+            }
+        }
+
+        
         if(changed)
         {
             matrix.postTranslate(moveX, moveY);
@@ -241,13 +266,13 @@ public class NoteInterface extends ConstraintLayout
 
 
 
-    private void onToNextButtonClicked()
+    private void toNextPage()
     {
         currPage++;
         updateInterfaces();
     }
 
-    private void onToBeforeButtonClicked()
+    private void toBeforePage()
     {
         currPage--;
         updateInterfaces();
@@ -361,7 +386,8 @@ public class NoteInterface extends ConstraintLayout
 
 
                                 float targetScale = scale * currScale;
-                                targetScale = Math.max(minScale, Math.min(targetScale, minScale * 3.f));
+                                targetScale = Math.max(minScale, Math.min(targetScale,
+                                        minScale * 5.f));
 
                                 float adjustedScale = targetScale / currScale;
                                 currScale = targetScale;
@@ -382,15 +408,60 @@ public class NoteInterface extends ConstraintLayout
                     @Override
                     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY)
                     {
+                        if(currScale > minScale)
+                        {
+                            matrix.postTranslate(-distanceX, -distanceY);
 
-                        matrix.postTranslate(-distanceX, -distanceY);
+                            enforceBounds();
 
-                        enforceBounds();
+                            noteImage.setImageMatrix(matrix);
+                        }
 
-                        noteImage.setImageMatrix(matrix);
+                        return true;
+                    }
+
+                    private static final float SWIPE_MIN_DISTANCE = 100f;
+                    private static final float SWIPE_MIN_VELOCITY = 800f;
+
+                    @Override
+                    public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY)
+                        // e1 : 시작점. e2 : 끝점
+                    {
+                        if(currScale > minScale) return false;
+                        if(e1 == null || e2 == null) return false;
+
+                        float dx = e2.getX() - e1.getX();
+                        float dy = e2.getY() - e1.getY();
+
+                        // 가로방향이 우세한 스와이프만 인정
+                        if(Math.abs(dx) < Math.abs(dy)) return false;
+
+                        if(Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(velocityX) < SWIPE_MIN_VELOCITY)
+                        {
+                            int i = 0;
+                            return false;
+                        }
+
+                        if(dx < 0)
+                        {
+                            if(currPage < dataAdmin.getPageSize() - 1)
+                            {
+                                toNextPage();
+                            }
+                        }
+                        else
+                        {
+                            if(currPage > 0)
+                            {
+                                toBeforePage();
+                            }
+                        }
+
                         return true;
                     }
                 });
+
+
 
 
                 noteImage.setOnTouchListener((v, event)->

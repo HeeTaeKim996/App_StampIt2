@@ -132,7 +132,8 @@ public class MoveButton extends androidx.appcompat.widget.AppCompatTextView
         return event.getX() >= 0
                 && event.getX() < getWidth()
                 && event.getY() >= getHeight()
-                && event.getY() < getHeight() * 2;
+//                && event.getY() < getHeight() * 2
+                ;
     }
 
     public void setOnOutsideClickedListener(Consumer<View> runnable)

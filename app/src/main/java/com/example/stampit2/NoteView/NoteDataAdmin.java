@@ -40,14 +40,6 @@ public class NoteDataAdmin
     { return getNotePageFile(noteInfo.pages.get(page)); }
 
 
-    private File getNotePageVersionFile(short pageId, short version)
-    { return new File(pagePath + "/"
-            + pageId + "/v/" + String.valueOf(version));}
-
-    private File getNotePageVersionFileByPage(short page, short version)
-    { return getNotePageVersionFile(noteInfo.pages.get(page), version); }
-
-
 
     private NoteInfo noteInfo;
     public short getPageSize() { return (short) noteInfo.pages.size();}
@@ -236,11 +228,9 @@ public class NoteDataAdmin
 
     private void saveNoteByPage(Uri uri, short pageId)
     {
-        // TODO : 버전에 대한 메타 데이터 생성
-
-        File versionFile = getNotePageVersionFile(pageId, (short) 1);
-        versionFile.mkdirs();
-        File imageFile = new File(versionFile, getOriginName(uri) + ".img");
+        File pageIdFile = getNotePageFile(pageId);
+        pageIdFile.mkdirs();
+        File imageFile = new File(pageIdFile, getOriginName(uri) + ".img");
 
 
         try
@@ -345,11 +335,9 @@ public class NoteDataAdmin
 
     public Uri loadNoteByPage(short page)
     {
-        // TODO : 버전에 대한 메타 데이터에 기반하여 마지막 버전의 img 를 리턴
+        File pageFile = getNotePageFileByPage(page);
 
-        File versionFile = getNotePageVersionFileByPage(page, (short) 1);
-
-        if(versionFile.exists() == false || versionFile.isDirectory() == false)
+        if(pageFile.exists() == false || pageFile.isDirectory() == false)
         {
             InformUtils.instance().showOnlyInfo(appContext,
                     "오류 : NoteDataAdmin - loadNoteByPage 1");
@@ -357,7 +345,7 @@ public class NoteDataAdmin
         }
 
         // 폴더 내에서 .img 로 끝나는 첫번째 파일을 리턴
-        File[] imageFiles = versionFile.listFiles((dir, name) -> name.endsWith(".img"));
+        File[] imageFiles = pageFile.listFiles((dir, name) -> name.endsWith(".img"));
         if(imageFiles == null || imageFiles.length == 0)
         {
             InformUtils.instance().showOnlyInfo(appContext,
