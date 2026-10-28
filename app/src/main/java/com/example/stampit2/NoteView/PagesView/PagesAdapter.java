@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.stampit2.NoteView.NoteDataAdmin;
 import com.example.stampit2.R;
+import com.example.stampit2.Utils.DrawUtils;
 import com.example.stampit2.Utils.InformUtils;
 
 import java.util.ArrayList;
@@ -91,7 +92,13 @@ public class PagesAdapter extends RecyclerView.Adapter<PagesAdapter.PageViewHold
     @Override
     public void onBindViewHolder(PageViewHolder holder, int position)
     {
-        holder.pageImage.setImageURI(dataAdmin.loadNoteByPage((short)position));
+//        holder.pageImage.setImageURI(dataAdmin.loadNoteByPage((short)position));
+
+        DrawUtils.instance().drawByGlide(pagesView.getContext(), holder.pageImage,
+                dataAdmin.loadNoteByPage((short)position), null);
+
+
+
         holder.pageNumber.setText(String.valueOf(position + 1));
 
         if(isSelectMode == false)
