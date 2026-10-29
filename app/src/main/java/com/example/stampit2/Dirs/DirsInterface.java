@@ -58,7 +58,7 @@ public class DirsInterface extends ConstraintLayout
         Calendar c = Calendar.getInstance();
         int id = (c.get(Calendar.YEAR) - 2000 << 23) | (c.get(Calendar.MONTH) + 1 << 19) |
                 (c.get(Calendar.DATE) << 14) | (c.get(Calendar.HOUR_OF_DAY) << 9) |
-                (c.get(Calendar.MINUTE) << 3) | (c.get(Calendar.MILLISECOND) & 7);
+                (c.get(Calendar.MINUTE) << 3) | (c.get(Calendar.SECOND) / 10);
         
         // TODO : id 충돌시, ++ 를 반복해가며 충돌 회피
 
@@ -73,7 +73,7 @@ public class DirsInterface extends ConstraintLayout
         int minute = noteId >> 3 & 63;
         int milli = noteId & 7;
 
-        return String.format("%04d-%02d-%02d(%02d:%02d-%01d)",
-                year + 2000, month, date, hour, minute, milli);
+        return String.format("%3d/%02d/%02d(%02d:%02d:%1d)",
+                year, month, date, hour, minute, milli);
     }
 }
