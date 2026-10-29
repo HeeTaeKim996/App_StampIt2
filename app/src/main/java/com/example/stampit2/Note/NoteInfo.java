@@ -1,8 +1,6 @@
-package com.example.stampit2.NoteView;
+package com.example.stampit2.Note;
 
-import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 public class NoteInfo
 {

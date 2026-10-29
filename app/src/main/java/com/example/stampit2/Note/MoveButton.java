@@ -1,4 +1,4 @@
-package com.example.stampit2.NoteView;
+package com.example.stampit2.Note;
 
 import android.content.Context;
 import android.view.MotionEvent;

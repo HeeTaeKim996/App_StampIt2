@@ -1,4 +1,4 @@
-package com.example.stampit2.NoteView.PagesView;
+package com.example.stampit2.Note.PagesView;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,7 +9,7 @@ import android.widget.TextView;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.stampit2.NoteView.NoteDataAdmin;
+import com.example.stampit2.Note.NoteDataAdmin;
 import com.example.stampit2.R;
 import com.example.stampit2.Utils.DrawUtils;
 import com.example.stampit2.Utils.InformUtils;

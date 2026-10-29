@@ -1,4 +1,4 @@
-package com.example.stampit2.NoteView;
+package com.example.stampit2.Note;
 
 
 import android.content.Context;
@@ -17,7 +17,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package com.example.stampit2.NoteView.PagesView;
+package com.example.stampit2.Note.PagesView;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -10,7 +10,7 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.stampit2.NoteView.NoteDataAdmin;
+import com.example.stampit2.Note.NoteDataAdmin;
 import com.example.stampit2.R;
 
 public class PagesView extends LinearLayout

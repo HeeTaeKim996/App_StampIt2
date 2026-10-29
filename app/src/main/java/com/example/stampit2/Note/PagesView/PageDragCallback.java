@@ -1,4 +1,4 @@
-package com.example.stampit2.NoteView.PagesView;
+package com.example.stampit2.Note.PagesView;
 
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;

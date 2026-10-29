@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.example.stampit2.NoteView.NoteInterface
+<com.example.stampit2.Note.NoteInterface
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
 
@@ -21,14 +21,14 @@
             android:layout_height="match_parent"
             android:layout_weight="3" />
 
-        <com.example.stampit2.NoteView.MoveButton
+        <com.example.stampit2.Note.MoveButton
             android:id="@+id/button_note_toBefore"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="3"
             android:text="B" />
 
-        <com.example.stampit2.NoteView.MoveButton
+        <com.example.stampit2.Note.MoveButton
             android:id="@+id/button_note_toNext"
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -67,4 +67,4 @@
         />
 
 
-</com.example.stampit2.NoteView.NoteInterface>
+</com.example.stampit2.Note.NoteInterface>
