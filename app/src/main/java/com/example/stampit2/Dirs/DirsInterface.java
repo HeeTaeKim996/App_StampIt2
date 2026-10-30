@@ -7,11 +7,14 @@ import android.widget.Button;
 
 import androidx.constraintlayout.widget.ConstraintLayout;
 
+import com.example.stampit2.Dirs.DB.DbRepository;
+import com.example.stampit2.Dirs.DB.FolderInfo;
 import com.example.stampit2.R;
 import com.example.stampit2.Utils.InformUtils;
 
 import java.io.File;
 import java.util.Calendar;
+import java.util.List;
 
 public class DirsInterface extends ConstraintLayout
 {
@@ -48,8 +51,11 @@ public class DirsInterface extends ConstraintLayout
 
     private void init(Context context)
     {
-        InformUtils.instance().showOnlyInfo(getContext(),
-                getTimeInfoFromNoteId(getNoteIdFromNow()));
+//        InformUtils.instance().showOnlyInfo(getContext(),
+//                getTimeInfoFromNoteId(getNoteIdFromNow()));
+
+        DbRepository.initialize(context);
+        List<FolderInfo> folders = DbRepository.instance().getAllFolders();
     }
 
 
