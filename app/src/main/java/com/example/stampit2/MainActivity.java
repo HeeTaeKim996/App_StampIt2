@@ -4,6 +4,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
 
+import com.example.stampit2.Dirs.DB.DbRepository;
+
 //public class MainActivity extends AppCompatActivity
 //{
 //    private NoteInterface noteInterface;
@@ -61,6 +63,13 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+
+//        deleteDatabase("dirs.db");
+
+        DbRepository.initialize(this);
+
+
+
 
         setContentView(R.layout.dirs);
     }

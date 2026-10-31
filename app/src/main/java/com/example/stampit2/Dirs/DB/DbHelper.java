@@ -30,12 +30,10 @@ public class DbHelper extends SQLiteOpenHelper
                         "id INTEGER PRIMARY KEY," +
                         "folderId INTEGER NOT NULL DEFAULT 0," +
                         "title TEXT NOT NULL," +
-                        "preview TEXT," +
-                        "createdAt INTEGER NOT NULL," +
-                        "updatedAt INTEGER NOT NULL" +
+                        "imagePath TEXT" +
                         ")"
                 );
-        db.execSQL("CREATE INDEX idx_notes_folder ON notes(folderId, updatedAt DESC)");
+        db.execSQL("CREATE INDEX idx_notes_folder ON notes(folderId)");
     }
 
     // DB_VERSION 이 올라갔을 때 호출 (스키마 변경 시)

@@ -5,6 +5,11 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteStatement;
 
 
+import com.example.stampit2.Dirs.FileInfo;
+import com.example.stampit2.Dirs.FolderInfo;
+import com.example.stampit2.Dirs.HeaderInfo;
+import com.example.stampit2.Dirs.NoteInfo;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,9 +67,10 @@ public class DbRepository
         return list;
     }
 
-    public List<FolderInfo> getFoldersInFolder(long folderId)
+    public List<FileInfo> getFilesInFolder(long folderId)
     {
-        List<FolderInfo> list = new ArrayList<>();
+        List<FileInfo> list = new ArrayList<>();
+
         try(Cursor c = helper.getReadableDatabase().rawQuery(
                 "SELECT id, parentId, name FROM folders " +
                         "WHERE parentId = ? ORDER BY id ASC",
@@ -76,26 +82,24 @@ public class DbRepository
                 list.add(new FolderInfo(c.getLong(0), c.getLong(1), c.getString(2)));
             }
         }
-        return list;
-    }
 
-    public List<NoteInfo> getNotesInFolder(long folderId)
-    {
-        List<NoteInfo> list = new ArrayList<>();
+        list.add(new HeaderInfo(0, ""));
+
         try(Cursor c = helper.getReadableDatabase().rawQuery(
-                "SELECT id, title, preview, updatedAt FROM notes " +
-                        "WHERE folderId = ? ORDER BY updatedAt DESC",
+                "SELECT id, title, imagePath FROM notes " +
+                        "WHERE folderId = ? ORDER BY id DESC",
                 new String[]{String.valueOf(folderId)}
         ))
         {
             while(c.moveToNext())
             {
-                list.add(new NoteInfo(c.getLong(0), c.getString(1), c.getString(2),
-                        c.getLong(3)));
+                list.add(new NoteInfo(c.getLong(0), c.getString(1), c.getString(2)));
             }
         }
+
         return list;
     }
+
 
     public void moveNote(long noteId, long newFolderId)
     {
@@ -117,5 +121,22 @@ public class DbRepository
         );
         
         // TODO : 실제 파일 삭제
+    }
+
+    public long getFoldersParentId(long id)
+    {
+        try(Cursor c = helper.getReadableDatabase().rawQuery(
+                "SELECT parentId FROM folders " +
+                        "WHERE id = ?",
+                new String[]{String.valueOf(id)}
+        ))
+        {
+            if(c.moveToNext())
+            {
+                return c.getLong(0);
+            }
+        }
+
+        return 0;
     }
 }
