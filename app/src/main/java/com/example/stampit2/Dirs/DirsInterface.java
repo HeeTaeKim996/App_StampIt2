@@ -11,11 +11,14 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.stampit2.Dirs.DB.DbRepository;
+import com.example.stampit2.Note.NoteInterface;
 import com.example.stampit2.R;
 import com.example.stampit2.Utils.InformUtils;
 import com.example.stampit2.databinding.DirsOtherSetBinding;
+import com.example.stampit2.databinding.NoteBinding;
 import com.example.stampit2.databinding.UtilsSetTextBinding;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -32,6 +35,15 @@ public class DirsInterface extends ConstraintLayout
 
     private List<Long> currFolders = new ArrayList<>();
 
+    private File rootFile;
+    private File getNoteFile(int id)
+    {
+        return new File(rootFile, "/n/" + String.valueOf(id));
+    }
+    private String getNoteFileToString(int id)
+    {
+        return rootFile.toString() + "/n/" + String.valueOf(id);
+    }
 
 
     public DirsInterface(Context context)
@@ -57,6 +69,8 @@ public class DirsInterface extends ConstraintLayout
 
     private void init(Context context)
     {
+        rootFile = context.getFilesDir();
+
         DirsAdapter adapter = new DirsAdapter();
         adapter.setFromDirsAdapter(fromDirsAdapter);
 
@@ -86,6 +100,7 @@ public class DirsInterface extends ConstraintLayout
 
         findViewById(R.id.button_dirs_otherSet).setOnClickListener(v-> { showOtherSetPanel(); });
         findViewById(R.id.button_dirs_toRootFolder).setOnClickListener(v-> { onToRootFolderButtonClicked(); });
+        findViewById(R.id.button_dirs_addNote).setOnClickListener(v->{onAddNoteButtonClicked();});
     }
 
 
@@ -95,8 +110,11 @@ public class DirsInterface extends ConstraintLayout
         int id = (c.get(Calendar.YEAR) - 2000 << 23) | (c.get(Calendar.MONTH) + 1 << 19) |
                 (c.get(Calendar.DATE) << 14) | (c.get(Calendar.HOUR_OF_DAY) << 9) |
                 (c.get(Calendar.MINUTE) << 3) | (c.get(Calendar.SECOND) / 10);
-        
-        // TODO : id 충돌시, ++ 를 반복해가며 충돌 회피
+
+        while(getNoteFile(id).exists())
+        {
+            id++;
+        }
 
         return id;
     }
@@ -228,5 +246,29 @@ public class DirsInterface extends ConstraintLayout
             currFolders.remove(currFolders.size() - 1);
         }
         showCurrFiles();
+    }
+
+    private void onAddNoteButtonClicked()
+    {
+        int noteId = getNoteIdFromNow();
+        Context context = getContext();
+
+
+        if(DbRepository.instance().addNote(noteId, getCurrFolder()) == false)
+        {
+            InformUtils.instance().showOnlyInfo(getContext(), "노트생성실패");
+            return;
+        }
+
+        String noteFileString = getNoteFileToString(noteId);
+
+        NoteBinding binding = NoteBinding.inflate(LayoutInflater.from(context));
+        AlertDialog dialog = new AlertDialog.Builder(context).setView(binding.getRoot())
+                .create();
+
+        dialog.show();
+
+        NoteInterface noteInterface = (NoteInterface) binding.getRoot();
+        noteInterface.initializeNote(noteFileString, true);
     }
 }

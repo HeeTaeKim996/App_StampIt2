@@ -2,10 +2,9 @@ package com.example.stampit2.Dirs;
 
 public class NoteInfo extends FileInfo
 {
-    public NoteInfo(long inId,  String inTitle, String inImagePath)
+    public NoteInfo(long inId,  String inTitle)
     {
         super(inId, inTitle);
-        imagePath = inImagePath;
     }
 
     @Override
@@ -13,11 +12,6 @@ public class NoteInfo extends FileInfo
     {
         return TYPE_NOTE;
     }
-
-    public String getImagePath() { return imagePath; }
-
-
-    private  String imagePath;
 
 
 }

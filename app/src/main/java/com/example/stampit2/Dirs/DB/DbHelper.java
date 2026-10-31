@@ -29,8 +29,7 @@ public class DbHelper extends SQLiteOpenHelper
         db.execSQL("CREATE TABLE notes(" +
                         "id INTEGER PRIMARY KEY," +
                         "folderId INTEGER NOT NULL DEFAULT 0," +
-                        "title TEXT NOT NULL," +
-                        "imagePath TEXT" +
+                        "title TEXT" +
                         ")"
                 );
         db.execSQL("CREATE INDEX idx_notes_folder ON notes(folderId)");

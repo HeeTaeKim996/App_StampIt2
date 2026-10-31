@@ -48,8 +48,7 @@ public class DirsAdapter extends ListAdapter<FileInfo, RecyclerView.ViewHolder>
                 {
                     NoteInfo o = (NoteInfo) oldItem;
                     NoteInfo n = (NoteInfo) newItem;
-                    return Objects.equals(o.getTitle(), n.getTitle())
-                            && Objects.equals(o.getImagePath(), n.getImagePath());
+                    return Objects.equals(o.getTitle(), n.getTitle());
                 }
                 else if(oldItem instanceof HeaderInfo && newItem instanceof HeaderInfo)
                 {

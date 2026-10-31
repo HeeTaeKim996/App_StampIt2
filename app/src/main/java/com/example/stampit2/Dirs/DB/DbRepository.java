@@ -2,6 +2,7 @@ package com.example.stampit2.Dirs.DB;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteStatement;
 
 
@@ -86,14 +87,14 @@ public class DbRepository
         list.add(new HeaderInfo(0, ""));
 
         try(Cursor c = helper.getReadableDatabase().rawQuery(
-                "SELECT id, title, imagePath FROM notes " +
+                "SELECT id, title FROM notes " +
                         "WHERE folderId = ? ORDER BY id DESC",
                 new String[]{String.valueOf(folderId)}
         ))
         {
             while(c.moveToNext())
             {
-                list.add(new NoteInfo(c.getLong(0), c.getString(1), c.getString(2)));
+                list.add(new NoteInfo(c.getLong(0), c.getString(1)));
             }
         }
 
@@ -138,5 +139,25 @@ public class DbRepository
         }
 
         return 0;
+    }
+
+
+    public boolean addNote(int noteId, long parentFolder)
+    {
+        try
+        {
+            helper.getWritableDatabase().execSQL(
+                    "INSERT INTO notes(id, folderId) " +
+                            "VALUES(?, ?)",
+                    new String[]{String.valueOf(noteId), String.valueOf(parentFolder)}
+            );
+        }
+        catch(SQLException e)
+        {
+            e.printStackTrace();
+            return false;
+        }
+
+        return true;
     }
 }

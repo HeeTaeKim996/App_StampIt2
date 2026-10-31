@@ -78,5 +78,14 @@
         android:layout_height="0dp"
 
         />
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/button_dirs_addNote"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_margin="16sp"
+        android:src="@drawable/ic_launcher_foreground"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        />
 
 </com.example.stampit2.Dirs.DirsInterface>
